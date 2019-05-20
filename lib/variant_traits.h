@@ -121,7 +121,7 @@ decltype(auto) VisitImpl(F&& f, TTypePack<IndexPacks...>, Vs&&... vs) {
         VisitImplImpl<ReturnType, IndexPacks, F&&, Vs&&...>...};
     const std::size_t idx = EvalMatrixIndex(
         std::index_sequence<TSize<std::decay_t<Vs>>::value...>{},
-        vs.index()...);
+        TVariantAccessor::Index(vs)...);
     return handlers[idx](std::forward<F>(f), std::forward<Vs>(vs)...);
 }
 
