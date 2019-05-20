@@ -37,4 +37,14 @@ TEST_CASE("Smoking test", "[variant]") {
     v = std::string{"abc"};
     v = Visit([](auto&& value) -> TVar { return value + value; }, std::move(v));
     REQUIRE(Get<2>(v) == "abcabc");
+
+    SECTION("Variant copy") {
+        auto tmp = v;
+        REQUIRE(tmp.index() == v.index());
+        REQUIRE(tmp == v);
+        REQUIRE(Get<std::string>(tmp) == "abcabc");
+        tmp.emplace<1>(0.5);
+        v = tmp;
+        REQUIRE(HoldsAlternative<double>(v));
+    }
 }

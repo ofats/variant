@@ -156,7 +156,7 @@ public:
             }
         } else if (index() == rhs.index()) {
             Visit([](auto& dst, const auto& src) {
-                NPrivate::CallIfSame([](auto& x, const auto& y) {
+                NPrivate::CallIfSame<void>([](auto& x, const auto& y) {
                     x = y;
                 }, dst, src);
             }, *this, rhs);
@@ -174,7 +174,7 @@ public:
             }
         } else if (index() == rhs.index()) {
             Visit([](auto& dst, auto& src) -> void {
-                NPrivate::CallIfSame([](auto& x, auto& y) {
+                NPrivate::CallIfSame<void>([](auto& x, auto& y) {
                     x = std::move(y);
                 }, dst, src);
             }, *this, rhs);
@@ -234,7 +234,7 @@ public:
         if (!valueless_by_exception() || !rhs.valueless_by_exception()) {
             if (index() == rhs.index()) {
                 Visit([](auto& a, auto& b) -> void {
-                    NPrivate::CallIfSame([](auto& x, auto& y) {
+                    NPrivate::CallIfSame<void>([](auto& x, auto& y) {
                         DoSwap(x, y);
                     }, a, b);
                 }, *this, rhs);
@@ -297,7 +297,7 @@ bool operator==(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
         return false;
     }
     return a.valueless_by_exception() || Visit([](const auto& a, const auto& b) {
-        return NPrivate::CallIfSame([](const auto& x, const auto& y) {
+        return NPrivate::CallIfSame<bool>([](const auto& x, const auto& y) {
             return x == y;
         }, a, b);
     }, a, b);
@@ -311,7 +311,7 @@ bool operator!=(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
         return true;
     }
     return !a.valueless_by_exception() && Visit([](const auto& a, const auto& b) {
-        return NPrivate::CallIfSame([](const auto& x, const auto& y) {
+        return NPrivate::CallIfSame<bool>([](const auto& x, const auto& y) {
             return x != y;
         }, a, b);
     }, a, b);
@@ -327,7 +327,7 @@ bool operator<(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
     }
     if (a.index() == b.index()) {
         return Visit([](const auto& a, const auto& b) {
-            return NPrivate::CallIfSame([](const auto& x, const auto& y) {
+            return NPrivate::CallIfSame<bool>([](const auto& x, const auto& y) {
                 return x < y;
             }, a, b);
         }, a, b);
@@ -347,7 +347,7 @@ bool operator>(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
     }
     if (a.index() == b.index()) {
         return Visit([](const auto& a, const auto& b) -> bool {
-            return NPrivate::CallIfSame([](const auto& x, const auto& y) {
+            return NPrivate::CallIfSame<bool>([](const auto& x, const auto& y) {
                 return x > y;
             }, a, b);
         }, a, b);
@@ -367,7 +367,7 @@ bool operator<=(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
     }
     if (a.index() == b.index()) {
         return Visit([](const auto& a, const auto& b) {
-            return NPrivate::CallIfSame([](const auto& x, const auto& y) {
+            return NPrivate::CallIfSame<bool>([](const auto& x, const auto& y) {
                 return x <= y;
             }, a, b);
         }, a, b);
@@ -387,7 +387,7 @@ bool operator>=(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
     }
     if (a.index() == b.index()) {
         return Visit([](const auto& a, const auto& b) {
-            return NPrivate::CallIfSame([](const auto& x, const auto& y) {
+            return NPrivate::CallIfSame<bool>([](const auto& x, const auto& y) {
                 return x >= y;
             }, a, b);
         }, a, b);

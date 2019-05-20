@@ -125,13 +125,13 @@ decltype(auto) VisitImpl(F&& f, TTypePack<IndexPacks...>, Vs&&... vs) {
     return handlers[idx](std::forward<F>(f), std::forward<Vs>(vs)...);
 }
 
-template <class F, class T>
-decltype(auto) CallIfSame(F&& f, T&& a, T&& b) {
+template <class ReturnType, class F, class T>
+ReturnType CallIfSame(F&& f, T&& a, T&& b) {
     return std::forward<F>(f)(std::forward<T>(a), std::forward<T>(b));
 }
 
-template <class F, class T, class U>
-decltype(auto) CallIfSame(F&&, T&&, U&&) { // Will never be called
+template <class ReturnType, class F, class T, class U>
+ReturnType CallIfSame(F&&, T&&, U&&) { // Will never be called
     std::terminate();
 }
 
