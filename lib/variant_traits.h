@@ -75,66 +75,147 @@ struct TTypeTraits {
     using TNotEmpty = std::integral_constant<bool, (sizeof...(Ts) > 0)>;
 };
 
-template <class FRef, class VRef, std::size_t I = 0>
+template <class F, class... Vs>
 using TReturnType = decltype(
-    std::declval<FRef>()(TVariantAccessor::Get<I>(std::declval<VRef>())));
+    std::declval<F>()(TVariantAccessor::Get<0>(std::declval<Vs>())...));
 
-template <class FRef, class VRef, std::size_t... Is>
-constexpr bool CheckReturnTypes(std::index_sequence<Is...>) {
-    using R = TReturnType<FRef, VRef>;
-    return TConjunction<std::is_same<R, TReturnType<FRef, VRef, Is>>...>::value;
+template <class ReturnType, class FRef, class... VRefs, std::size_t... ids>
+ReturnType UnwrapIndexes(FRef f, VRefs... vs, std::index_sequence<ids...>) {
+    return std::forward<FRef>(f)(
+        TVariantAccessor::Get<ids>(std::forward<VRefs>(vs))...);
 }
 
-template <class ReturnType, std::size_t I, class FRef, class VRef>
-ReturnType VisitImplImpl(FRef f, VRef v) {
-    return std::forward<FRef>(f)(TVariantAccessor::Get<I>(std::forward<VRef>(v)));
+template <class ReturnType, class Indexes, class FRef, class... VRefs>
+ReturnType VisitImplImpl(FRef f, VRefs... vs) {
+    return UnwrapIndexes<ReturnType, FRef, VRefs...>(
+        std::forward<FRef>(f), std::forward<VRefs>(vs)..., Indexes{});
 }
 
-template <class ReturnType, class FRef, class VRef>
-ReturnType VisitImplFail(FRef, VRef) {
-    throw TBadVariantAccess{};
+template <class... Ts>
+struct TTypePack {};
+
+template <std::size_t... szs, class... Ids>
+constexpr std::size_t EvalMatrixIndex(std::index_sequence<szs...>, Ids... ids) {
+    constexpr std::size_t n = sizeof...(ids);
+    constexpr std::size_t sizes[] = {szs...};
+    const std::size_t indexes[] = {(std::size_t)ids...};
+    std::size_t result = 0;
+    for (std::size_t i = 0; i < n; ++i) {
+        result *= sizes[n - i - 1];
+        result += indexes[n - i - 1];
+    }
+    return result;
 }
 
-template <class F, class V, std::size_t... Is>
-decltype(auto) VisitImpl(F&& f, V&& v, std::index_sequence<Is...>) {
-    using FRef = decltype(std::forward<F>(f));
-    using VRef = decltype(std::forward<V>(v));
-    using ReturnType = TReturnType<FRef, VRef>;
-    using LambdaType = ReturnType (*)(FRef, VRef);
-    static constexpr LambdaType handlers[] = {
-        VisitImplImpl<ReturnType, Is, FRef, VRef>...,
-        VisitImplFail<ReturnType, FRef, VRef>};
-    return handlers[TVariantAccessor::Index(v)](std::forward<F>(f), std::forward<V>(v));
+static_assert(EvalMatrixIndex(std::index_sequence<3, 3>{}, 0, 0) == 0, "");
+static_assert(EvalMatrixIndex(std::index_sequence<3, 3>{}, 1, 0) == 1, "");
+static_assert(EvalMatrixIndex(std::index_sequence<3, 3>{}, 1, 2) == 7, "");
+static_assert(EvalMatrixIndex(std::index_sequence<3, 3, 3>{}, 1, 2, 1) == 16,
+              "");
+
+template <class F, class... Vs, class... IndexPacks>
+decltype(auto) VisitImpl(F&& f, TTypePack<IndexPacks...>, Vs&&... vs) {
+    using ReturnType = TReturnType<F&&, Vs&&...>;
+    using LambdaType = ReturnType (*)(F&&, Vs&&...);
+    constexpr LambdaType handlers[] = {
+        VisitImplImpl<ReturnType, IndexPacks, F&&, Vs&&...>...};
+    const std::size_t idx = EvalMatrixIndex(
+        std::index_sequence<TSize<std::decay_t<Vs>>::value...>{},
+        vs.index()...);
+    return handlers[idx](std::forward<F>(f), std::forward<Vs>(vs)...);
 }
 
-template <class F, class V>
-void VisitWrapForVoid(F&& f, V&& v, std::true_type) {
-    // We need to make special wrapper when return type equals void
-    auto l = [&](auto&& x) {
-        std::forward<F>(f)(std::forward<decltype(x)>(x));
-        return 0;
-    };
-    VisitImpl(l, std::forward<V>(v), std::make_index_sequence<TSize<std::decay_t<V>>::value>{});
+template <class F, class T>
+decltype(auto) CallIfSame(F&& f, T&& a, T&& b) {
+    return std::forward<F>(f)(std::forward<T>(a), std::forward<T>(b));
 }
 
-template <class F, class V>
-decltype(auto) VisitWrapForVoid(F&& f, V&& v, std::false_type) {
-    return VisitImpl(std::forward<F>(f),
-                     std::forward<V>(v),
-                     std::make_index_sequence<TSize<std::decay_t<V>>::value>{});
-}
-
-// Can be simplified with c++17: IGNIETFERRO-982
-template <class Ret, class F, class T, class U>
-std::enable_if_t<std::is_same<std::decay_t<T>, std::decay_t<U>>::value,
-Ret> CallIfSame(F f, T&& a, U&& b) {
-    return f(std::forward<T>(a), std::forward<U>(b));
-}
-
-template <class Ret, class F, class T, class U>
-std::enable_if_t<!std::is_same<std::decay_t<T>, std::decay_t<U>>::value,
-Ret> CallIfSame(F, T&&, U&&) { // Will never be called
+template <class F, class T, class U>
+decltype(auto) CallIfSame(F&&, T&&, U&&) { // Will never be called
     std::terminate();
 }
+
+template <std::size_t... szs>
+constexpr std::size_t EvalMatrixSize() {
+    const std::size_t sizes[] = {szs...};
+    std::size_t result = 1;
+    for (const std::size_t s : sizes) {
+        result *= s;
+    }
+    return result;
+}
+
+template <>
+constexpr std::size_t EvalMatrixSize() {
+    return 0;
+}
+
+static_assert(EvalMatrixSize<3, 3, 3>() == 27, "");
+static_assert(EvalMatrixSize<3>() == 3, "");
+static_assert(EvalMatrixSize<0>() == 0, "");
+static_assert(EvalMatrixSize<>() == 0, "");
+
+template <std::size_t, std::size_t... acc>
+constexpr auto EvalMatrixIndexes(std::index_sequence<>,
+                                 std::index_sequence<acc...> result = {}) {
+    return result;
+}
+
+template <std::size_t index, std::size_t size, std::size_t... sizes,
+          std::size_t... acc>
+constexpr auto EvalMatrixIndexes(std::index_sequence<size, sizes...>,
+                                 std::index_sequence<acc...> = {}) {
+    return EvalMatrixIndexes<index / size>(
+        std::index_sequence<sizes...>{},
+        std::index_sequence<acc..., index % size>{});
+}
+
+static_assert(
+    std::is_same<decltype(EvalMatrixIndexes<0>(std::index_sequence<3, 3, 3>{})),
+                 std::index_sequence<0, 0, 0>>::value,
+    "");
+
+static_assert(std::is_same<decltype(EvalMatrixIndexes<26>(
+                               std::index_sequence<3, 3, 3>{})),
+                           std::index_sequence<2, 2, 2>>::value,
+              "");
+
+template <std::size_t... indexes, class Sizes>
+constexpr auto EvalMatrixIndexesFor(std::index_sequence<indexes...>,
+                                    Sizes sizes) {
+    return TTypePack<decltype(EvalMatrixIndexes<indexes>(sizes))...>{};
+}
+
+// 3x3 matrix test.
+static_assert(
+    std::is_same<decltype(EvalMatrixIndexesFor(std::make_index_sequence<9>{},
+                                               std::index_sequence<3, 3>{})),
+                 TTypePack<std::index_sequence<0, 0>, std::index_sequence<1, 0>,
+                           std::index_sequence<2, 0>, std::index_sequence<0, 1>,
+                           std::index_sequence<1, 1>, std::index_sequence<2, 1>,
+                           std::index_sequence<0, 2>, std::index_sequence<1, 2>,
+                           std::index_sequence<2, 2>>>::value,
+    "");
+
+// 3x3x3 matrix test.
+static_assert(
+    std::is_same<
+        decltype(EvalMatrixIndexesFor(std::make_index_sequence<27>{},
+                                      std::index_sequence<3, 3, 3>{})),
+        TTypePack<std::index_sequence<0, 0, 0>, std::index_sequence<1, 0, 0>,
+                  std::index_sequence<2, 0, 0>, std::index_sequence<0, 1, 0>,
+                  std::index_sequence<1, 1, 0>, std::index_sequence<2, 1, 0>,
+                  std::index_sequence<0, 2, 0>, std::index_sequence<1, 2, 0>,
+                  std::index_sequence<2, 2, 0>, std::index_sequence<0, 0, 1>,
+                  std::index_sequence<1, 0, 1>, std::index_sequence<2, 0, 1>,
+                  std::index_sequence<0, 1, 1>, std::index_sequence<1, 1, 1>,
+                  std::index_sequence<2, 1, 1>, std::index_sequence<0, 2, 1>,
+                  std::index_sequence<1, 2, 1>, std::index_sequence<2, 2, 1>,
+                  std::index_sequence<0, 0, 2>, std::index_sequence<1, 0, 2>,
+                  std::index_sequence<2, 0, 2>, std::index_sequence<0, 1, 2>,
+                  std::index_sequence<1, 1, 2>, std::index_sequence<2, 1, 2>,
+                  std::index_sequence<0, 2, 2>, std::index_sequence<1, 2, 2>,
+                  std::index_sequence<2, 2, 2>>>::value,
+    "");
 
 }  // namespace NPrivate

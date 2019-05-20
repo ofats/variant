@@ -63,3 +63,6 @@ struct TTypePackElement {
 // Shortcut for typename TTypePackElement::type.
 template <std::size_t I, class... Ts>
 using TTypePackElementT = typename TTypePackElement<I, Ts...>::type;
+
+static_assert(
+    std::is_same<TTypePackElementT<1, int, char, double>, char>::value, "");
