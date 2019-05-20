@@ -30,14 +30,19 @@ constexpr std::size_t VARIANT_NPOS = NPrivate::T_NPOS; // aka std::variant_npos
 
 
 template <class F, class... Vs>
-decltype(auto) Visit(F&& f, Vs&&... vs) {
-    return NPrivate::VisitImpl(
-        std::forward<F>(f),
-        NPrivate::EvalMatrixIndexesFor(
-            std::make_index_sequence<NPrivate::EvalMatrixSize<
-                VARIANT_SIZE_V<std::decay_t<Vs>>...>()>{},
-            std::index_sequence<VARIANT_SIZE_V<std::decay_t<Vs>>...>{}),
-        std::forward<Vs>(vs)...);
+constexpr decltype(auto) Visit(F&& f, Vs&&... vs) {
+    constexpr auto matrixSize =
+        NPrivate::EvalMatrixSize<1 + VARIANT_SIZE_V<std::decay_t<Vs>>...>();
+
+    constexpr auto indexesInFlatMatrix = std::make_index_sequence<matrixSize>{};
+
+    constexpr auto matrixDimensionsSizes =
+        std::index_sequence<1 + VARIANT_SIZE_V<std::decay_t<Vs>>...>{};
+
+    return NPrivate::VisitImpl(std::forward<F>(f),
+                               NPrivate::EvalMatrixIndexesFor(
+                                   indexesInFlatMatrix, matrixDimensionsSizes),
+                               std::forward<Vs>(vs)...);
 }
 
 

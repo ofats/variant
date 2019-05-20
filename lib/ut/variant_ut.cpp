@@ -48,3 +48,30 @@ TEST_CASE("Smoking test", "[variant]") {
         REQUIRE(HoldsAlternative<double>(v));
     }
 }
+
+TEST_CASE("Valueless by exception test", "[variant]") {
+    struct TThrowOnConstruct {
+        TThrowOnConstruct() { throw std::runtime_error{"TThrowOnConstruct"}; }
+    };
+
+    using TVar = TVariant<int, TThrowOnConstruct>;
+
+    TVar v;
+    REQUIRE(HoldsAlternative<int>(v));
+    REQUIRE(0 == v.index());
+    REQUIRE(0 == Get<0>(v));
+
+    REQUIRE_THROWS_AS(v.emplace<1>(), std::runtime_error);
+
+    REQUIRE(v.valueless_by_exception());
+    REQUIRE(VARIANT_NPOS == v.index());
+
+    REQUIRE_THROWS_AS(Get<0>(v), TBadVariantAccess);
+    REQUIRE(nullptr == GetIf<0>(&v));
+    REQUIRE_THROWS_AS(Visit([](auto&&) {}, v), TBadVariantAccess);
+
+    v = 5;
+    REQUIRE(HoldsAlternative<int>(v));
+    REQUIRE(0 == v.index());
+    REQUIRE(5 == Get<int>(v));
+}

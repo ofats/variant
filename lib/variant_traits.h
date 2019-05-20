@@ -85,17 +85,28 @@ ReturnType UnwrapIndexes(FRef f, VRefs... vs, std::index_sequence<ids...>) {
         TVariantAccessor::Get<ids>(std::forward<VRefs>(vs))...);
 }
 
-template <class ReturnType, class Indexes, class FRef, class... VRefs>
-ReturnType VisitImplImpl(FRef f, VRefs... vs) {
+// Normal case (when no one variant is valueless by exception).
+template <class ReturnType, class Indexes, class InBoundaries, class FRef,
+          class... VRefs>
+constexpr std::enable_if_t<InBoundaries::value, ReturnType> VisitImplImpl(
+    FRef f, VRefs... vs) {
     return UnwrapIndexes<ReturnType, FRef, VRefs...>(
         std::forward<FRef>(f), std::forward<VRefs>(vs)..., Indexes{});
+}
+
+// Boundaries case (when some of variants is valueless by exception).
+template <class ReturnType, class Indexes, class InBoundaries, class FRef,
+          class... VRefs>
+constexpr std::enable_if_t<!InBoundaries::value, ReturnType> VisitImplImpl(
+    FRef, VRefs...) {
+    throw TBadVariantAccess{};
 }
 
 template <class... Ts>
 struct TTypePack {};
 
 template <std::size_t... szs, class... Ids>
-constexpr std::size_t EvalMatrixIndex(std::index_sequence<szs...>, Ids... ids) {
+constexpr std::size_t EvalFlatMatrixIndex(std::index_sequence<szs...>, Ids... ids) {
     constexpr std::size_t n = sizeof...(ids);
     constexpr std::size_t sizes[] = {szs...};
     const std::size_t indexes[] = {(std::size_t)ids...};
@@ -107,21 +118,37 @@ constexpr std::size_t EvalMatrixIndex(std::index_sequence<szs...>, Ids... ids) {
     return result;
 }
 
-static_assert(EvalMatrixIndex(std::index_sequence<3, 3>{}, 0, 0) == 0, "");
-static_assert(EvalMatrixIndex(std::index_sequence<3, 3>{}, 1, 0) == 1, "");
-static_assert(EvalMatrixIndex(std::index_sequence<3, 3>{}, 1, 2) == 7, "");
-static_assert(EvalMatrixIndex(std::index_sequence<3, 3, 3>{}, 1, 2, 1) == 16,
-              "");
+static_assert(EvalFlatMatrixIndex(std::index_sequence<3, 3>{}, 0, 0) == 0, "");
+static_assert(EvalFlatMatrixIndex(std::index_sequence<3, 3>{}, 1, 0) == 1, "");
+static_assert(EvalFlatMatrixIndex(std::index_sequence<3, 3>{}, 1, 2) == 7, "");
+static_assert(EvalFlatMatrixIndex(std::index_sequence<3, 3, 3>{}, 1, 2, 1) == 16, "");
+
+template <class Indexes, class Sizes>
+struct TCheckBoundaries;
+
+template <std::size_t... ids, std::size_t... szs>
+struct TCheckBoundaries<std::index_sequence<ids...>,
+                        std::index_sequence<szs...>>
+    : TConjunction<std::integral_constant<bool, (ids < szs)>...> {};
+
+static_assert(TCheckBoundaries<std::index_sequence<>, std::index_sequence<>>::value, "");
+static_assert(TCheckBoundaries<std::index_sequence<1, 2, 1>, std::index_sequence<3, 3, 3>>::value, "");
+static_assert(!TCheckBoundaries<std::index_sequence<1, 2, 3>, std::index_sequence<3, 3, 3>>::value, "");
 
 template <class F, class... Vs, class... IndexPacks>
 decltype(auto) VisitImpl(F&& f, TTypePack<IndexPacks...>, Vs&&... vs) {
     using ReturnType = TReturnType<F&&, Vs&&...>;
     using LambdaType = ReturnType (*)(F&&, Vs&&...);
+
+    using RealSizes = std::index_sequence<TSize<std::decay_t<Vs>>::value...>;
+    using FakeSizes = std::index_sequence<1 + TSize<std::decay_t<Vs>>::value...>;
+
     constexpr LambdaType handlers[] = {
-        VisitImplImpl<ReturnType, IndexPacks, F&&, Vs&&...>...};
-    const std::size_t idx = EvalMatrixIndex(
-        std::index_sequence<TSize<std::decay_t<Vs>>::value...>{},
-        TVariantAccessor::Index(vs)...);
+        VisitImplImpl<ReturnType, IndexPacks, TCheckBoundaries<IndexPacks, RealSizes>, F&&, Vs&&...>...};
+
+    const std::size_t idx =
+        EvalFlatMatrixIndex(FakeSizes{}, TVariantAccessor::Index(vs)...);
+
     return handlers[idx](std::forward<F>(f), std::forward<Vs>(vs)...);
 }
 
