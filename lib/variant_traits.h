@@ -11,17 +11,6 @@ class TBadVariantAccess : public std::exception {};
 
 namespace NPrivate {
 
-template <std::size_t I, class V>
-struct TAlternative;
-
-template <std::size_t I, class... Ts>
-struct TAlternative<I, TVariant<Ts...>> {
-    using type = TTypePackElementT<I, Ts...>;
-};
-
-template <std::size_t I, class V>
-using TAlternativeType = typename TAlternative<I, V>::type;
-
 template <class V>
 struct TSize;
 
@@ -30,16 +19,16 @@ struct TSize<TVariant<Ts...>> : std::integral_constant<std::size_t, sizeof...(Ts
 
 struct TVariantAccessor {
     template <std::size_t I, class... Ts>
-    static TAlternativeType<I, TVariant<Ts...>>& Get(TVariant<Ts...>& v);
+    static TTypePackElementT<I, Ts...>& Get(TVariant<Ts...>& v);
 
     template <std::size_t I, class... Ts>
-    static const TAlternativeType<I, TVariant<Ts...>>& Get(const TVariant<Ts...>& v);
+    static const TTypePackElementT<I, Ts...>& Get(const TVariant<Ts...>& v);
 
     template <std::size_t I, class... Ts>
-    static TAlternativeType<I, TVariant<Ts...>>&& Get(TVariant<Ts...>&& v);
+    static TTypePackElementT<I, Ts...>&& Get(TVariant<Ts...>&& v);
 
     template <std::size_t I, class... Ts>
-    static const TAlternativeType<I, TVariant<Ts...>>&& Get(const TVariant<Ts...>&& v);
+    static const TTypePackElementT<I, Ts...>&& Get(const TVariant<Ts...>&& v);
 
     template <class... Ts>
     static constexpr std::size_t Index(const TVariant<Ts...>& v) noexcept;
@@ -50,22 +39,26 @@ constexpr std::size_t T_NPOS = -1;
 template <class X, class... Ts>
 constexpr std::size_t IndexOfImpl() {
     bool bs[] = {std::is_same<X, Ts>::value...};
+    std::size_t result = T_NPOS;
+    std::size_t count = 0;
     for (std::size_t i = 0; i < sizeof...(Ts); ++i) {
         if (bs[i]) {
-            return i;
+            ++count;
+            if (T_NPOS == result) {
+                result = i;
+            }
         }
     }
-    return T_NPOS;
+    return count == 1 ? result : T_NPOS;
 }
+
+static_assert(IndexOfImpl<int, int, double>() == 0, "");
+static_assert(IndexOfImpl<int, double>() == T_NPOS, "");
+static_assert(IndexOfImpl<int, int, double, int>() == T_NPOS, "");
+static_assert(IndexOfImpl<int>() == T_NPOS, "");
 
 template <class X, class... Ts>
 struct TIndexOf : std::integral_constant<std::size_t, IndexOfImpl<X, Ts...>()> {};
-
-template <class X, class V>
-struct TAlternativeIndex;
-
-template <class X, class... Ts>
-struct TAlternativeIndex<X, TVariant<Ts...>> : TIndexOf<X, Ts...> {};
 
 template <class... Ts>
 struct TTypeTraits {

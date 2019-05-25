@@ -50,15 +50,22 @@ using TIndexedTypesFor =
 template <std::size_t I, class T>
 constexpr TIndexedType<I, T> GetIndexedType(TIndexedType<I, T>);
 
-}  // namespace NPrivate
-
-// Metafunction taking type pack and some index.
-// Return type located on required index in that pack.
-template <std::size_t I, class... Ts>
-struct TTypePackElement {
+template <std::size_t I, bool indexInBoundaries, class... Ts>
+struct TTypePackElementImpl {
     using type = TSubtype<decltype(
         NPrivate::GetIndexedType<I>(NPrivate::TIndexedTypesFor<Ts...>{}))>;
 };
+
+template <std::size_t I, class... Ts>
+struct TTypePackElementImpl<I, false, Ts...> {};
+
+}  // namespace NPrivate
+
+// Metafunction taking type pack and some index.
+// Returns type located on required position in that pack.
+template <std::size_t I, class... Ts>
+struct TTypePackElement
+    : NPrivate::TTypePackElementImpl<I, (I < sizeof...(Ts)), Ts...> {};
 
 // Shortcut for typename TTypePackElement::type.
 template <std::size_t I, class... Ts>

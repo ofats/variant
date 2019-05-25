@@ -32,7 +32,10 @@ TEST_CASE("Smoking test", "[variant]") {
 
     v = 3;
     v = Visit(sumVisiter, std::move(v));
+    REQUIRE(Get<int>(v) == 6);
     REQUIRE(Get<0>(v) == 6);
+    REQUIRE(*GetIf<int>(&v) == 6);
+    REQUIRE(*GetIf<0>(&v) == 6);
 
     v = std::string{"abc"};
     v = Visit([](auto&& value) -> TVar { return value + value; }, std::move(v));
@@ -74,4 +77,95 @@ TEST_CASE("Valueless by exception test", "[variant]") {
     REQUIRE(HoldsAlternative<int>(v));
     REQUIRE(0 == v.index());
     REQUIRE(5 == Get<int>(v));
+}
+
+namespace {
+
+template <class T, class...>
+using TTypeT = T;
+
+template <class...>
+using TVoidT = TTypeT<void>;
+
+template <class... Ts>
+struct TTypePack {};
+
+template <class F, class Args, class = void>
+struct TIsInvocableImpl : std::false_type {};
+
+template <class F, class... Args>
+struct TIsInvocableImpl<
+    F, TTypePack<Args...>,
+    TVoidT<decltype(std::declval<F>()(std::declval<Args>()...))>>
+    : std::true_type {};
+
+template <class F, class... Args>
+using TIsInvocable = TIsInvocableImpl<F, TTypePack<Args...>>;
+
+template <class F, class... Args>
+constexpr bool IS_INVOKABLE = TIsInvocable<F, Args...>::value;
+
+template <class Arg, class F>
+constexpr bool CheckCallable(F&&) {
+    return IS_INVOKABLE<F&&, Arg>;
+}
+
+#define WELL_FORMED(TYPE, VAR, EXP) \
+    CheckCallable<TYPE>([](auto VAR) -> decltype(EXP) {})
+
+#define ILL_FORMED(TYPE, VAR, EXP) !WELL_FORMED(TYPE, VAR, EXP)
+
+}  // namespace
+
+TEST_CASE("Static test", "[variant]") {
+    using TVar = TVariant<int, double, char, char>;
+
+    SECTION("Check Get and GetIf by index") {
+        // Argument to Get and GetIf functions must be less then number of
+        // variant alternatives
+        REQUIRE(WELL_FORMED(TVar, v, Get<2>(v)));
+        REQUIRE(WELL_FORMED(TVar, v, GetIf<2>(&v)));
+        REQUIRE(ILL_FORMED(TVar, v, Get<5>(v)));
+        REQUIRE(ILL_FORMED(TVar, v, GetIf<5>(&v)));
+    }
+
+    SECTION("Check Get and GetIf by type") {
+        // Type must be presented in altenatives list exactly once
+        REQUIRE(WELL_FORMED(TVar, v, Get<int>(v)));
+        REQUIRE(WELL_FORMED(TVar, v, Get<double>(v)));
+        REQUIRE(ILL_FORMED(TVar, v, Get<char>(v)));
+        REQUIRE(ILL_FORMED(TVar, v, Get<int*>(v)));
+
+        REQUIRE(WELL_FORMED(TVar, v, GetIf<int>(&v)));
+        REQUIRE(WELL_FORMED(TVar, v, GetIf<double>(&v)));
+        REQUIRE(ILL_FORMED(TVar, v, GetIf<char>(&v)));
+        REQUIRE(ILL_FORMED(TVar, v, GetIf<int*>(&v)));
+    }
+
+    SECTION("Check HoldsAlternative") {
+        // Type must be presented in altenatives list exactly once
+        REQUIRE(WELL_FORMED(TVar, v, HoldsAlternative<int>(v)));
+        REQUIRE(WELL_FORMED(TVar, v, HoldsAlternative<double>(v)));
+        REQUIRE(ILL_FORMED(TVar, v, HoldsAlternative<char>(v)));
+        REQUIRE(ILL_FORMED(TVar, v, HoldsAlternative<int*>(v)));
+    }
+
+    using TVar2 = TVariant<int, std::string>;
+
+    SECTION("Check emplace") {
+        // Choosen alternative must be constructible from arguments
+        REQUIRE(WELL_FORMED(TVar2, v, v.template emplace<int>(5)));
+        REQUIRE(WELL_FORMED(TVar2, v, v.template emplace<0>(5)));
+        REQUIRE(ILL_FORMED(TVar2, v, v.template emplace<int>(nullptr)));
+        REQUIRE(ILL_FORMED(TVar2, v, v.template emplace<0>(nullptr)));
+
+        REQUIRE(WELL_FORMED(TVar2, v, v.template emplace<std::string>("abc")));
+        REQUIRE(WELL_FORMED(TVar2, v, v.template emplace<1>("abc")));
+        REQUIRE(ILL_FORMED(TVar2, v,
+                           v.template emplace<std::string>((void*)nullptr)));
+        REQUIRE(ILL_FORMED(TVar2, v, v.template emplace<1>((void*)nullptr)));
+
+        REQUIRE(ILL_FORMED(TVar2, v, v.template emplace<2>()));
+        REQUIRE(ILL_FORMED(TVar2, v, v.template emplace<double>()));
+    }
 }

@@ -15,10 +15,14 @@ template <std::size_t I>
 constexpr TInPlaceIndex<I> IN_PLACE_INDEX; // aka std::in_place_index
 
 template <std::size_t I, class V>
-using TVariantAlternative = NPrivate::TAlternative<I, V>; // aka std::variant_alternative
+struct TVariantAlternative;
+
+template <std::size_t I, class... Ts>
+struct TVariantAlternative<I, TVariant<Ts...>> : TTypePackElement<I, Ts...> {};
 
 template <std::size_t I, class V>
-using TVariantAlternativeT = NPrivate::TAlternativeType<I, V>; // aka std::variant_alternative_t
+using TVariantAlternativeT =
+    typename TVariantAlternative<I, V>::type;  // aka std::variant_alternative_t
 
 template <class V>
 using TVariantSize = NPrivate::TSize<V>; // aka std::variant_size
@@ -45,58 +49,12 @@ constexpr decltype(auto) Visit(F&& f, Vs&&... vs) {
                                std::forward<Vs>(vs)...);
 }
 
-
 template <class T, class... Ts>
-constexpr bool HoldsAlternative(const TVariant<Ts...>& v) noexcept {
-    static_assert(NPrivate::TIndexOf<T, Ts...>::value != VARIANT_NPOS, "T not in types");
+constexpr std::enable_if_t<NPrivate::TIndexOf<T, Ts...>::value != VARIANT_NPOS,
+                           bool>
+HoldsAlternative(const TVariant<Ts...>& v) noexcept {
     return NPrivate::TIndexOf<T, Ts...>::value == v.index();
 }
-
-
-// -------------------- GET BY INDEX --------------------
-
-template <std::size_t I, class... Ts>
-decltype(auto) Get(TVariant<Ts...>& v);
-
-template <std::size_t I, class... Ts>
-decltype(auto) Get(const TVariant<Ts...>& v);
-
-template <std::size_t I, class... Ts>
-decltype(auto) Get(TVariant<Ts...>&& v);
-
-template <std::size_t I, class... Ts>
-decltype(auto) Get(const TVariant<Ts...>&& v);
-
-
-// -------------------- GET BY TYPE --------------------
-
-template <class T, class... Ts>
-decltype(auto) Get(TVariant<Ts...>& v);
-
-template <class T, class... Ts>
-decltype(auto) Get(const TVariant<Ts...>& v);
-
-template <class T, class... Ts>
-decltype(auto) Get(TVariant<Ts...>&& v);
-
-template <class T, class... Ts>
-decltype(auto) Get(const TVariant<Ts...>&& v);
-
-
-// -------------------- GET IF --------------------
-
-template <std::size_t I, class... Ts>
-auto* GetIf(TVariant<Ts...>* v) noexcept;
-
-template <std::size_t I, class... Ts>
-const auto* GetIf(const TVariant<Ts...>* v) noexcept;
-
-template <class T, class... Ts>
-T* GetIf(TVariant<Ts...>* v) noexcept;
-
-template <class T, class... Ts>
-const T* GetIf(const TVariant<Ts...>* v) noexcept;
-
 
 template <class... Ts>
 class TVariant {
@@ -118,7 +76,7 @@ public:
     TVariant() noexcept(std::is_nothrow_default_constructible<T_0>::value) {
         static_assert(std::is_default_constructible<T_0>::value,
                       "First alternative must be default constructible");
-        EmplaceImpl<T_0>();
+        EmplaceImpl<0>();
     }
 
     TVariant(const TVariant& rhs) {
@@ -136,17 +94,17 @@ public:
 
     template <class T, class = std::enable_if_t<!std::is_same<std::decay_t<T>, TVariant>::value>>
     TVariant(T&& value) {
-        EmplaceImpl<T>(std::forward<T>(value));
+        EmplaceImpl<TIndex<T>::value>(std::forward<T>(value));
     }
 
     template <class T, class... TArgs>
     explicit TVariant(TInPlaceType<T>, TArgs&&... args) {
-        EmplaceImpl<T>(std::forward<TArgs>(args)...);
+        EmplaceImpl<TIndex<T>::value>(std::forward<TArgs>(args)...);
     }
 
     template <std::size_t I, class... TArgs>
     explicit TVariant(TInPlaceIndex<I>, TArgs&&... args) {
-        EmplaceImpl<TVariantAlternativeT<I, TVariant>>(std::forward<TArgs>(args)...);
+        EmplaceImpl<I>(std::forward<TArgs>(args)...);
     }
 
     ~TVariant() {
@@ -199,8 +157,8 @@ public:
     std::enable_if_t<!std::is_same<std::decay_t<T>, TVariant>::value,
                      TVariant&>
     operator=(T&& value) {
-        if (::HoldsAlternative<std::decay_t<T>>(*this)) {
-            *ReinterpretAs<T>() = std::forward<T>(value);
+        if (HoldsAlternative<std::decay_t<T>>(*this)) {
+            *ReinterpretAs<TIndex<std::decay_t<T>>::value>() = std::forward<T>(value);
         } else {
             emplace<T>(std::forward<T>(value));
         }
@@ -219,20 +177,24 @@ public:
 
     // -------------------- MODIFIERS --------------------
 
-    template <class T, class... Args>
-    T& emplace(Args&&... args) {
+    template <std::size_t I, class... Args>
+    std::enable_if_t<std::is_constructible<TVariantAlternativeT<I, TVariant>,
+                                           Args...>::value,
+                     TVariantAlternativeT<I, TVariant>>&
+    emplace(Args&&... args) {
         Destroy();
         try {
-            return EmplaceImpl<T>(std::forward<Args>(args)...);
+            return EmplaceImpl<I>(std::forward<Args>(args)...);
         } catch (...) {
-            Index_ = ::TVariantSize<TVariant>::value;
+            Index_ = sizeof...(Ts);
             throw;
         }
     };
 
-    template <std::size_t I, class... Args, class T = TVariantAlternativeT<I, TVariant>>
-    T& emplace(Args&&... args) {
-        return emplace<T>(std::forward<Args>(args)...);
+    template <class T, class... Args>
+    auto emplace(Args&&... args)
+        -> decltype(emplace<TIndex<T>::value>(std::forward<Args>(args)...)) {
+        return emplace<TIndex<T>::value>(std::forward<Args>(args)...);
     };
 
     void swap(TVariant& rhs) {
@@ -263,12 +225,11 @@ private:
         }, *this);
     }
 
-    template <class T, class... TArgs>
-    T& EmplaceImpl(TArgs&&... args) {
-        static_assert(TIndex<T>::value != VARIANT_NPOS, "Type not in TVariant.");
-        new (&Storage_) std::decay_t<T>(std::forward<TArgs>(args)...);
-        Index_ = TIndex<T>::value;
-        return *ReinterpretAs<T>();
+    template <std::size_t I, class... TArgs>
+    TVariantAlternativeT<I, TVariant>& EmplaceImpl(TArgs&&... args) {
+        new (&Storage_) TVariantAlternativeT<I, TVariant>(std::forward<TArgs>(args)...);
+        Index_ = I;
+        return *ReinterpretAs<I>();
     }
 
     template <class Variant>
@@ -281,14 +242,14 @@ private:
 private:
     friend struct NPrivate::TVariantAccessor;
 
-    template <class T>
-    auto* ReinterpretAs() noexcept {
-        return reinterpret_cast<std::decay_t<T>*>(&Storage_);
+    template <std::size_t I>
+    TVariantAlternativeT<I, TVariant>* ReinterpretAs() noexcept {
+        return reinterpret_cast<TVariantAlternativeT<I, TVariant>*>(&Storage_);
     }
 
-    template <class T>
-    const auto* ReinterpretAs() const noexcept {
-        return reinterpret_cast<const std::decay_t<T>*>(&Storage_);
+    template <std::size_t I>
+    const TVariantAlternativeT<I, TVariant>* ReinterpretAs() const noexcept {
+        return reinterpret_cast<const TVariantAlternativeT<I, TVariant>*>(&Storage_);
     }
 
 private:
@@ -413,75 +374,84 @@ decltype(auto) GetImpl(V&& v) {
 
 }  // namespace NPrivate
 
+// -------------------- GET BY INDEX --------------------
+
 template <std::size_t I, class... Ts>
-decltype(auto) Get(TVariant<Ts...>& v) {
+TTypePackElementT<I, Ts...>& Get(TVariant<Ts...>& v) {
     return NPrivate::GetImpl<I>(v);
 }
 
 template <std::size_t I, class... Ts>
-decltype(auto) Get(const TVariant<Ts...>& v) {
+const TTypePackElementT<I, Ts...>& Get(const TVariant<Ts...>& v) {
     return NPrivate::GetImpl<I>(v);
 }
 
 template <std::size_t I, class... Ts>
-decltype(auto) Get(TVariant<Ts...>&& v) {
+TTypePackElementT<I, Ts...>&& Get(TVariant<Ts...>&& v) {
     return NPrivate::GetImpl<I>(std::move(v));
 }
 
 template <std::size_t I, class... Ts>
-decltype(auto) Get(const TVariant<Ts...>&& v) {
+const TTypePackElementT<I, Ts...>&& Get(const TVariant<Ts...>&& v) {
     return NPrivate::GetImpl<I>(std::move(v));
 }
 
-
-namespace NPrivate {
-
-template <class T, class V>
-decltype(auto) GetImpl(V&& v) {
-    return ::Get< NPrivate::TAlternativeIndex<T, std::decay_t<V>>::value>(std::forward<V>(v));
-}
-
-}  // namespace NPrivate
+// -------------------- GET BY TYPE --------------------
 
 template <class T, class... Ts>
-decltype(auto) Get(TVariant<Ts...>& v) {
-    return NPrivate::GetImpl<T>(v);
+auto Get(TVariant<Ts...>& v)
+    -> decltype(Get<NPrivate::TIndexOf<T, Ts...>::value>(v)) {
+    return Get<NPrivate::TIndexOf<T, Ts...>::value>(v);
 }
 
 template <class T, class... Ts>
-decltype(auto) Get(const TVariant<Ts...>& v) {
-    return NPrivate::GetImpl<T>(v);
+auto Get(const TVariant<Ts...>& v)
+    -> decltype(Get<NPrivate::TIndexOf<T, Ts...>::value>(v)) {
+    return Get<NPrivate::TIndexOf<T, Ts...>::value>(v);
 }
 
 template <class T, class... Ts>
-decltype(auto) Get(TVariant<Ts...>&& v) {
-    return NPrivate::GetImpl<T>(std::move(v));
+auto Get(TVariant<Ts...>&& v)
+    -> decltype(Get<NPrivate::TIndexOf<T, Ts...>::value>(std::move(v))) {
+    return Get<NPrivate::TIndexOf<T, Ts...>::value>(std::move(v));
 }
 
 template <class T, class... Ts>
-decltype(auto) Get(const TVariant<Ts...>&& v) {
-    return NPrivate::GetImpl<T>(std::move(v));
+auto Get(const TVariant<Ts...>&& v)
+    -> decltype(Get<NPrivate::TIndexOf<T, Ts...>::value>(std::move(v))) {
+    return Get<NPrivate::TIndexOf<T, Ts...>::value>(std::move(v));
 }
 
+// -------------------- GET IF BY INDEX --------------------
 
 template <std::size_t I, class... Ts>
-auto* GetIf(TVariant<Ts...>* v) noexcept {
-    return v != nullptr && I == v->index() ? &NPrivate::TVariantAccessor::Get<I>(*v) : nullptr;
+std::add_pointer_t<TTypePackElementT<I, Ts...>> GetIf(
+    TVariant<Ts...>* v) noexcept {
+    return v != nullptr && I == v->index()
+               ? &NPrivate::TVariantAccessor::Get<I>(*v)
+               : nullptr;
 }
 
 template <std::size_t I, class... Ts>
-const auto* GetIf(const TVariant<Ts...>* v) noexcept {
-    return v != nullptr && I == v->index() ? &NPrivate::TVariantAccessor::Get<I>(*v) : nullptr;
+std::add_pointer_t<const TTypePackElementT<I, Ts...>> GetIf(
+    const TVariant<Ts...>* v) noexcept {
+    return v != nullptr && I == v->index()
+               ? &NPrivate::TVariantAccessor::Get<I>(*v)
+               : nullptr;
+}
+
+// -------------------- GET IF BY TYPE --------------------
+
+template <class T, class... Ts>
+auto GetIf(TVariant<Ts...>* v) noexcept
+    -> decltype(GetIf<NPrivate::TIndexOf<T, Ts...>::value>(v)) {
+    return GetIf<NPrivate::TIndexOf<T, Ts...>::value>(v);
 }
 
 template <class T, class... Ts>
-T* GetIf(TVariant<Ts...>* v) noexcept {
-    return ::GetIf< NPrivate::TIndexOf<T, Ts...>::value>(v);
-}
-
-template <class T, class... Ts>
-const T* GetIf(const TVariant<Ts...>* v) noexcept {
-    return ::GetIf< NPrivate::TIndexOf<T, Ts...>::value>(v);
+auto GetIf(const TVariant<Ts...>* v) noexcept
+    -> decltype(GetIf<NPrivate::TIndexOf<T, Ts...>::value>(v)) {
+    return GetIf<NPrivate::TIndexOf<T, Ts...>::value>(v);
 }
 
 struct TMonostate {};
@@ -508,25 +478,25 @@ constexpr bool operator!=(TMonostate, TMonostate) noexcept {
 namespace NPrivate {
 
 template <std::size_t I, class... Ts>
-TVariantAlternativeT<I, TVariant<Ts...>>& TVariantAccessor::Get(TVariant<Ts...>& v) {
-    return *v.template ReinterpretAs<TVariantAlternativeT<I, TVariant<Ts...>>>();
+TTypePackElementT<I, Ts...>& TVariantAccessor::Get(TVariant<Ts...>& v) {
+    return *v.template ReinterpretAs<I>();
 }
 
 template <std::size_t I, class... Ts>
-const TVariantAlternativeT<I, TVariant<Ts...>>& TVariantAccessor::Get(
+const TTypePackElementT<I, Ts...>& TVariantAccessor::Get(
     const TVariant<Ts...>& v) {
-    return *v.template ReinterpretAs<TVariantAlternativeT<I, TVariant<Ts...>>>();
+    return *v.template ReinterpretAs<I>();
 }
 
 template <std::size_t I, class... Ts>
-TVariantAlternativeT<I, TVariant<Ts...>>&& TVariantAccessor::Get(TVariant<Ts...>&& v) {
-    return std::move(*v.template ReinterpretAs<TVariantAlternativeT<I, TVariant<Ts...>>>());
+TTypePackElementT<I, Ts...>&& TVariantAccessor::Get(TVariant<Ts...>&& v) {
+    return std::move(*v.template ReinterpretAs<I>());
 }
 
 template <std::size_t I, class... Ts>
-const TVariantAlternativeT<I, TVariant<Ts...>>&& TVariantAccessor::Get(
+const TTypePackElementT<I, Ts...>&& TVariantAccessor::Get(
     const TVariant<Ts...>&& v) {
-    return std::move(*v.template ReinterpretAs<TVariantAlternativeT<I, TVariant<Ts...>>>());
+    return std::move(*v.template ReinterpretAs<I>());
 }
 
 template <class... Ts>
