@@ -18,7 +18,7 @@ template <std::size_t I, class V>
 struct TVariantAlternative;
 
 template <std::size_t I, class... Ts>
-struct TVariantAlternative<I, TVariant<Ts...>> : TTypePackElement<I, Ts...> {};
+struct TVariantAlternative<I, TVariant<Ts...>> : meta::type_pack_element<I, Ts...> {};
 
 template <std::size_t I, class V>
 using TVariantAlternativeT =
@@ -86,7 +86,7 @@ public:
     }
 
     TVariant(TVariant&& rhs) noexcept(
-        TConjunction<std::is_nothrow_move_constructible<Ts>...>::value) {
+        meta::conjunction<std::is_nothrow_move_constructible<Ts>...>::value) {
         if (!rhs.valueless_by_exception()) {
             ForwardVariant(std::move(rhs));
         }
@@ -377,22 +377,22 @@ decltype(auto) GetImpl(V&& v) {
 // -------------------- GET BY INDEX --------------------
 
 template <std::size_t I, class... Ts>
-TTypePackElementT<I, Ts...>& Get(TVariant<Ts...>& v) {
+meta::type_pack_element_t<I, Ts...>& Get(TVariant<Ts...>& v) {
     return NPrivate::GetImpl<I>(v);
 }
 
 template <std::size_t I, class... Ts>
-const TTypePackElementT<I, Ts...>& Get(const TVariant<Ts...>& v) {
+const meta::type_pack_element_t<I, Ts...>& Get(const TVariant<Ts...>& v) {
     return NPrivate::GetImpl<I>(v);
 }
 
 template <std::size_t I, class... Ts>
-TTypePackElementT<I, Ts...>&& Get(TVariant<Ts...>&& v) {
+meta::type_pack_element_t<I, Ts...>&& Get(TVariant<Ts...>&& v) {
     return NPrivate::GetImpl<I>(std::move(v));
 }
 
 template <std::size_t I, class... Ts>
-const TTypePackElementT<I, Ts...>&& Get(const TVariant<Ts...>&& v) {
+const meta::type_pack_element_t<I, Ts...>&& Get(const TVariant<Ts...>&& v) {
     return NPrivate::GetImpl<I>(std::move(v));
 }
 
@@ -425,7 +425,7 @@ auto Get(const TVariant<Ts...>&& v)
 // -------------------- GET IF BY INDEX --------------------
 
 template <std::size_t I, class... Ts>
-std::add_pointer_t<TTypePackElementT<I, Ts...>> GetIf(
+std::add_pointer_t<meta::type_pack_element_t<I, Ts...>> GetIf(
     TVariant<Ts...>* v) noexcept {
     return v != nullptr && I == v->index()
                ? &NPrivate::TVariantAccessor::Get<I>(*v)
@@ -433,7 +433,7 @@ std::add_pointer_t<TTypePackElementT<I, Ts...>> GetIf(
 }
 
 template <std::size_t I, class... Ts>
-std::add_pointer_t<const TTypePackElementT<I, Ts...>> GetIf(
+std::add_pointer_t<const meta::type_pack_element_t<I, Ts...>> GetIf(
     const TVariant<Ts...>* v) noexcept {
     return v != nullptr && I == v->index()
                ? &NPrivate::TVariantAccessor::Get<I>(*v)
@@ -478,23 +478,23 @@ constexpr bool operator!=(TMonostate, TMonostate) noexcept {
 namespace NPrivate {
 
 template <std::size_t I, class... Ts>
-TTypePackElementT<I, Ts...>& TVariantAccessor::Get(TVariant<Ts...>& v) {
+meta::type_pack_element_t<I, Ts...>& TVariantAccessor::Get(TVariant<Ts...>& v) {
     return *v.template ReinterpretAs<I>();
 }
 
 template <std::size_t I, class... Ts>
-const TTypePackElementT<I, Ts...>& TVariantAccessor::Get(
+const meta::type_pack_element_t<I, Ts...>& TVariantAccessor::Get(
     const TVariant<Ts...>& v) {
     return *v.template ReinterpretAs<I>();
 }
 
 template <std::size_t I, class... Ts>
-TTypePackElementT<I, Ts...>&& TVariantAccessor::Get(TVariant<Ts...>&& v) {
+meta::type_pack_element_t<I, Ts...>&& TVariantAccessor::Get(TVariant<Ts...>&& v) {
     return std::move(*v.template ReinterpretAs<I>());
 }
 
 template <std::size_t I, class... Ts>
-const TTypePackElementT<I, Ts...>&& TVariantAccessor::Get(
+const meta::type_pack_element_t<I, Ts...>&& TVariantAccessor::Get(
     const TVariant<Ts...>&& v) {
     return std::move(*v.template ReinterpretAs<I>());
 }

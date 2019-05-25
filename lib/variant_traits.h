@@ -1,6 +1,6 @@
 #pragma once
 
-#include "type_traits.h"
+#include "meta.h"
 
 #include <exception>
 
@@ -15,20 +15,23 @@ template <class V>
 struct TSize;
 
 template <class... Ts>
-struct TSize<TVariant<Ts...>> : std::integral_constant<std::size_t, sizeof...(Ts)> {};
+struct TSize<TVariant<Ts...>>
+    : std::integral_constant<std::size_t, sizeof...(Ts)> {};
 
 struct TVariantAccessor {
     template <std::size_t I, class... Ts>
-    static TTypePackElementT<I, Ts...>& Get(TVariant<Ts...>& v);
+    static meta::type_pack_element_t<I, Ts...>& Get(TVariant<Ts...>& v);
 
     template <std::size_t I, class... Ts>
-    static const TTypePackElementT<I, Ts...>& Get(const TVariant<Ts...>& v);
+    static const meta::type_pack_element_t<I, Ts...>& Get(
+        const TVariant<Ts...>& v);
 
     template <std::size_t I, class... Ts>
-    static TTypePackElementT<I, Ts...>&& Get(TVariant<Ts...>&& v);
+    static meta::type_pack_element_t<I, Ts...>&& Get(TVariant<Ts...>&& v);
 
     template <std::size_t I, class... Ts>
-    static const TTypePackElementT<I, Ts...>&& Get(const TVariant<Ts...>&& v);
+    static const meta::type_pack_element_t<I, Ts...>&& Get(
+        const TVariant<Ts...>&& v);
 
     template <class... Ts>
     static constexpr std::size_t Index(const TVariant<Ts...>& v) noexcept;
@@ -58,13 +61,15 @@ static_assert(IndexOfImpl<int, int, double, int>() == T_NPOS, "");
 static_assert(IndexOfImpl<int>() == T_NPOS, "");
 
 template <class X, class... Ts>
-struct TIndexOf : std::integral_constant<std::size_t, IndexOfImpl<X, Ts...>()> {};
+struct TIndexOf : std::integral_constant<std::size_t, IndexOfImpl<X, Ts...>()> {
+};
 
 template <class... Ts>
 struct TTypeTraits {
-    using TNoRefs = TConjunction<TNegation<std::is_reference<Ts>>...>;
-    using TNoVoids = TConjunction<TNegation<std::is_same<Ts, void>>...>;
-    using TNoArrays = TConjunction<TNegation<std::is_array<Ts>>...>;
+    using TNoRefs = meta::conjunction<meta::negation<std::is_reference<Ts>>...>;
+    using TNoVoids =
+        meta::conjunction<meta::negation<std::is_same<Ts, void>>...>;
+    using TNoArrays = meta::conjunction<meta::negation<std::is_array<Ts>>...>;
     using TNotEmpty = std::integral_constant<bool, (sizeof...(Ts) > 0)>;
 };
 
@@ -99,7 +104,8 @@ template <class... Ts>
 struct TTypePack {};
 
 template <std::size_t... szs, class... Ids>
-constexpr std::size_t EvalFlatMatrixIndex(std::index_sequence<szs...>, Ids... ids) {
+constexpr std::size_t EvalFlatMatrixIndex(std::index_sequence<szs...>,
+                                          Ids... ids) {
     constexpr std::size_t n = sizeof...(ids);
     constexpr std::size_t sizes[] = {szs...};
     const std::size_t indexes[] = {(std::size_t)ids...};
@@ -122,22 +128,30 @@ struct TCheckBoundaries;
 template <std::size_t... ids, std::size_t... szs>
 struct TCheckBoundaries<std::index_sequence<ids...>,
                         std::index_sequence<szs...>>
-    : TConjunction<std::integral_constant<bool, (ids < szs)>...> {};
+    : meta::conjunction<std::integral_constant<bool, (ids < szs)>...> {};
 
-static_assert(TCheckBoundaries<std::index_sequence<>, std::index_sequence<>>::value, "");
-static_assert(TCheckBoundaries<std::index_sequence<1, 2, 1>, std::index_sequence<3, 3, 3>>::value, "");
-static_assert(!TCheckBoundaries<std::index_sequence<1, 2, 3>, std::index_sequence<3, 3, 3>>::value, "");
+static_assert(
+    TCheckBoundaries<std::index_sequence<>, std::index_sequence<>>::value, "");
+static_assert(TCheckBoundaries<std::index_sequence<1, 2, 1>,
+                               std::index_sequence<3, 3, 3>>::value,
+              "");
+static_assert(!TCheckBoundaries<std::index_sequence<1, 2, 3>,
+                                std::index_sequence<3, 3, 3>>::value,
+              "");
 
 template <class F, class... Vs, class... IndexPacks>
 decltype(auto) VisitImpl(F&& f, TTypePack<IndexPacks...>, Vs&&... vs) {
     using ReturnType = TReturnType<F&&, Vs&&...>;
-    using LambdaType = ReturnType (*)(F&&, Vs&&...);
+    using LambdaType = ReturnType (*)(F&&, Vs && ...);
 
     using RealSizes = std::index_sequence<TSize<std::decay_t<Vs>>::value...>;
-    using FakeSizes = std::index_sequence<1 + TSize<std::decay_t<Vs>>::value...>;
+    using FakeSizes =
+        std::index_sequence<1 + TSize<std::decay_t<Vs>>::value...>;
 
     constexpr LambdaType handlers[] = {
-        VisitImplImpl<ReturnType, IndexPacks, TCheckBoundaries<IndexPacks, RealSizes>, F&&, Vs&&...>...};
+        VisitImplImpl<ReturnType, IndexPacks,
+                      TCheckBoundaries<IndexPacks, RealSizes>, F&&,
+                      Vs&&...>...};
 
     const std::size_t idx =
         EvalFlatMatrixIndex(FakeSizes{}, TVariantAccessor::Index(vs)...);
@@ -151,7 +165,7 @@ ReturnType CallIfSame(F&& f, T&& a, T&& b) {
 }
 
 template <class ReturnType, class F, class T, class U>
-ReturnType CallIfSame(F&&, T&&, U&&) { // Will never be called
+ReturnType CallIfSame(F&&, T&&, U&&) {  // Will never be called
     std::terminate();
 }
 

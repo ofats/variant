@@ -4,7 +4,7 @@
 
 TEST_CASE("Smoking test", "[variant]") {
     using TVar = TVariant<int, double, std::string>;
-    auto v = TVariant<int, double, std::string>{};
+    auto v = TVar{};
     REQUIRE(HoldsAlternative<int>(v));
     REQUIRE(0 == v.index());
 
@@ -81,33 +81,9 @@ TEST_CASE("Valueless by exception test", "[variant]") {
 
 namespace {
 
-template <class T, class...>
-using TTypeT = T;
-
-template <class...>
-using TVoidT = TTypeT<void>;
-
-template <class... Ts>
-struct TTypePack {};
-
-template <class F, class Args, class = void>
-struct TIsInvocableImpl : std::false_type {};
-
-template <class F, class... Args>
-struct TIsInvocableImpl<
-    F, TTypePack<Args...>,
-    TVoidT<decltype(std::declval<F>()(std::declval<Args>()...))>>
-    : std::true_type {};
-
-template <class F, class... Args>
-using TIsInvocable = TIsInvocableImpl<F, TTypePack<Args...>>;
-
-template <class F, class... Args>
-constexpr bool IS_INVOKABLE = TIsInvocable<F, Args...>::value;
-
 template <class Arg, class F>
 constexpr bool CheckCallable(F&&) {
-    return IS_INVOKABLE<F&&, Arg>;
+    return meta::is_invocable_v<F&&, Arg>;
 }
 
 #define WELL_FORMED(TYPE, VAR, EXP) \
