@@ -1,6 +1,6 @@
 enable_testing()
 
-project(lib)
+project(variant)
 
 set(HEADER_FILES
     matrix_ops.h

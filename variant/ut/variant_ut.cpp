@@ -1,4 +1,4 @@
-#include "lib/variant.h"
+#include "variant/variant.h"
 
 #include "catch/catch.h"
 
@@ -81,21 +81,11 @@ TEST_CASE("Valueless by exception test", "[variant]") {
 
     TVar v2;
     REQUIRE_THROWS_AS(v2.emplace<1>(), std::runtime_error);
-    REQUIRE(v != v2);
 
     SECTION("Swap would work even if one of variants in valueless") {
         v.swap(v2);
-        REQUIRE(HoldsAlternative<TThrowOnConstruct>(v));
+        REQUIRE(v.valueless_by_exception());
         REQUIRE(HoldsAlternative<int>(v2));
-    }
-
-    SECTION("Valueless variant always compares less than any other variant") {
-        REQUIRE(v > v2);
-        REQUIRE(v >= v2);
-        REQUIRE(v != v2);
-        REQUIRE(v2 < v);
-        REQUIRE(v2 <= v);
-        REQUIRE(v2 != v);
     }
 }
 

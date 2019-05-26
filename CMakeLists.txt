@@ -8,9 +8,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_FLAGS_DEBUG "-O0 -fno-omit-frame-pointer -g -fsanitize=address -Wall -Wextra -Werror")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -Wextra -Werror -g")
 
-project(advanced_future)
+project(variant_lib)
 
 include_directories(./)
 
-add_subdirectory(lib)
+add_subdirectory(variant)
 add_subdirectory(catch)

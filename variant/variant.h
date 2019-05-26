@@ -205,7 +205,7 @@ public:
                 Visit(
                     [](auto& a, auto& b) -> void {
                         NPrivate::CallIfSame<void>(
-                            [](auto& x, auto& y) { DoSwap(x, y); }, a, b);
+                            [](auto& x, auto& y) { std::swap(x, y); }, a, b);
                     },
                     *this, rhs);
             } else {
