@@ -68,19 +68,35 @@ TEST_CASE("Valueless by exception test", "[variant]") {
     REQUIRE(0 == v.index());
     REQUIRE(0 == Get<0>(v));
 
-    REQUIRE_THROWS_AS(v.emplace<1>(), std::runtime_error);
+    SECTION("Variant would become valueless after emplace") {
+        REQUIRE_THROWS_AS(v.emplace<1>(), std::runtime_error);
 
-    REQUIRE(v.valueless_by_exception());
-    REQUIRE(VARIANT_NPOS == v.index());
+        REQUIRE(v.valueless_by_exception());
+        REQUIRE(VARIANT_NPOS == v.index());
 
-    REQUIRE_THROWS_AS(Get<0>(v), TBadVariantAccess);
-    REQUIRE(nullptr == GetIf<0>(&v));
-    REQUIRE_THROWS_AS(Visit([](auto&&) {}, v), TBadVariantAccess);
+        REQUIRE_THROWS_AS(Get<0>(v), TBadVariantAccess);
+        REQUIRE(nullptr == GetIf<0>(&v));
+        REQUIRE_THROWS_AS(Visit([](auto&&) {}, v), TBadVariantAccess);
+    }
 
-    v = 5;
-    REQUIRE(HoldsAlternative<int>(v));
-    REQUIRE(0 == v.index());
-    REQUIRE(5 == Get<int>(v));
+    TVar v2;
+    REQUIRE_THROWS_AS(v2.emplace<1>(), std::runtime_error);
+    REQUIRE(v != v2);
+
+    SECTION("Swap would work even if one of variants in valueless") {
+        v.swap(v2);
+        REQUIRE(HoldsAlternative<TThrowOnConstruct>(v));
+        REQUIRE(HoldsAlternative<int>(v2));
+    }
+
+    SECTION("Valueless variant always compares less than any other variant") {
+        REQUIRE(v > v2);
+        REQUIRE(v >= v2);
+        REQUIRE(v != v2);
+        REQUIRE(v2 < v);
+        REQUIRE(v2 <= v);
+        REQUIRE(v2 != v);
+    }
 }
 
 namespace {
@@ -97,7 +113,7 @@ constexpr bool CheckCallable(F&&) {
 
 }  // namespace
 
-TEST_CASE("Static test", "[variant]") {
+TEST_CASE("SFINAE-friendliness test", "[variant]") {
     using TVar = TVariant<int, double, char, char>;
 
     SECTION("Check Get and GetIf by index") {
