@@ -5,6 +5,9 @@
 
 namespace meta {
 
+template <class T>
+using subtype = typename T::type;
+
 // aka std::void_t
 template <class...>
 using void_t = void;
@@ -35,6 +38,27 @@ constexpr bool is_invocable_v = is_invocable<F, Args...>::value;
 
 namespace detail {
 
+template <class F, bool invokable, class... Args>
+struct invoke_result {};
+
+template <class F, class... Args>
+struct invoke_result<F, true, Args...> {
+    using type = decltype(std::declval<F>()(std::declval<Args>()...));
+};
+
+}  // namespace detail
+
+// aka std::invoke_result
+template <class F, class... Args>
+struct invoke_result
+    : detail::invoke_result<F, is_invocable_v<F, Args...>, Args...> {};
+
+// aka std::invoke_result_t
+template <class F, class... Args>
+using invoke_result_t = subtype<invoke_result<F, Args...>>;
+
+namespace detail {
+
 template <class... Bs>
 constexpr bool conjunction_impl() {
     bool bs[] = {Bs::value...};
@@ -56,9 +80,6 @@ using conjunction =
 // aka std::negation
 template <class B>
 using negation = std::integral_constant<bool, !B::value>;
-
-template <class T>
-using subtype = typename T::type;
 
 namespace detail {
 

@@ -32,21 +32,17 @@ constexpr std::size_t VARIANT_SIZE_V = TVariantSize<V>::value; // aka std::varia
 
 constexpr std::size_t VARIANT_NPOS = NPrivate::T_NPOS; // aka std::variant_npos
 
-
 template <class F, class... Vs>
 constexpr decltype(auto) Visit(F&& f, Vs&&... vs) {
-    constexpr auto matrixSize =
-        NPrivate::EvalMatrixSize<1 + VARIANT_SIZE_V<std::decay_t<Vs>>...>();
-
-    constexpr auto indexesInFlatMatrix = std::make_index_sequence<matrixSize>{};
-
     constexpr auto matrixDimensionsSizes =
         std::index_sequence<1 + VARIANT_SIZE_V<std::decay_t<Vs>>...>{};
 
-    return NPrivate::VisitImpl(std::forward<F>(f),
-                               NPrivate::EvalMatrixIndexesFor(
-                                   indexesInFlatMatrix, matrixDimensionsSizes),
-                               std::forward<Vs>(vs)...);
+    constexpr auto matrixSize = matops::matrix_size(matrixDimensionsSizes);
+
+    return NPrivate::VisitImpl(
+        std::forward<F>(f),
+        matops::build_all_matrix_indexes(matrixDimensionsSizes),
+        std::forward<Vs>(vs)...);
 }
 
 template <class T, class... Ts>

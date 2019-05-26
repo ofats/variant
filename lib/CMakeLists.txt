@@ -3,6 +3,7 @@ enable_testing()
 project(lib)
 
 set(HEADER_FILES
+    matrix_ops.h
     meta.h
     variant.h
     variant_traits.h)
