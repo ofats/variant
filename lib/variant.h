@@ -3,16 +3,16 @@
 #include "variant_traits.h"
 
 template <class T>
-struct TInPlaceType {}; // aka std::in_place_type_t
+struct TInPlaceType {};  // aka std::in_place_type_t
 
 template <class T>
-constexpr TInPlaceType<T> IN_PLACE_TYPE; // aka std::in_place_type
+constexpr TInPlaceType<T> IN_PLACE_TYPE;  // aka std::in_place_type
 
 template <std::size_t I>
-struct TInPlaceIndex {}; // aka std::in_place_index_t
+struct TInPlaceIndex {};  // aka std::in_place_index_t
 
 template <std::size_t I>
-constexpr TInPlaceIndex<I> IN_PLACE_INDEX; // aka std::in_place_index
+constexpr TInPlaceIndex<I> IN_PLACE_INDEX;  // aka std::in_place_index
 
 template <std::size_t I, class V>
 struct TVariantAlternative;  // aka std::variant_alternative
@@ -93,7 +93,8 @@ public:
         }
     }
 
-    template <class T, class = std::enable_if_t<!std::is_same<std::decay_t<T>, TVariant>::value>>
+    template <class T, class = std::enable_if_t<
+                           !std::is_same<std::decay_t<T>, TVariant>::value>>
     TVariant(T&& value) {
         EmplaceImpl<TIndex<T>::value>(std::forward<T>(value));
     }
@@ -108,9 +109,7 @@ public:
         EmplaceImpl<I>(std::forward<TArgs>(args)...);
     }
 
-    ~TVariant() {
-        Destroy();
-    }
+    ~TVariant() { Destroy(); }
 
     TVariant& operator=(const TVariant& rhs) {
         if (rhs.valueless_by_exception()) {
@@ -119,11 +118,12 @@ public:
                 Index_ = ::TVariantSize<TVariant>::value;
             }
         } else if (index() == rhs.index()) {
-            Visit([](auto& dst, const auto& src) {
-                NPrivate::CallIfSame<void>([](auto& x, const auto& y) {
-                    x = y;
-                }, dst, src);
-            }, *this, rhs);
+            Visit(
+                [](auto& dst, const auto& src) {
+                    NPrivate::CallIfSame<void>(
+                        [](auto& x, const auto& y) { x = y; }, dst, src);
+                },
+                *this, rhs);
         } else {
             *this = TVariant{rhs};
         }
@@ -137,11 +137,12 @@ public:
                 Index_ = ::TVariantSize<TVariant>::value;
             }
         } else if (index() == rhs.index()) {
-            Visit([](auto& dst, auto& src) -> void {
-                NPrivate::CallIfSame<void>([](auto& x, auto& y) {
-                    x = std::move(y);
-                }, dst, src);
-            }, *this, rhs);
+            Visit(
+                [](auto& dst, auto& src) -> void {
+                    NPrivate::CallIfSame<void>(
+                        [](auto& x, auto& y) { x = std::move(y); }, dst, src);
+                },
+                *this, rhs);
         } else {
             Destroy();
             try {
@@ -155,11 +156,11 @@ public:
     }
 
     template <class T>
-    std::enable_if_t<!std::is_same<std::decay_t<T>, TVariant>::value,
-                     TVariant&>
+    std::enable_if_t<!std::is_same<std::decay_t<T>, TVariant>::value, TVariant&>
     operator=(T&& value) {
         if (HoldsAlternative<std::decay_t<T>>(*this)) {
-            *ReinterpretAs<TIndex<std::decay_t<T>>::value>() = std::forward<T>(value);
+            *ReinterpretAs<TIndex<std::decay_t<T>>::value>() =
+                std::forward<T>(value);
         } else {
             emplace<T>(std::forward<T>(value));
         }
@@ -201,11 +202,12 @@ public:
     void swap(TVariant& rhs) {
         if (!valueless_by_exception() || !rhs.valueless_by_exception()) {
             if (index() == rhs.index()) {
-                Visit([](auto& a, auto& b) -> void {
-                    NPrivate::CallIfSame<void>([](auto& x, auto& y) {
-                        DoSwap(x, y);
-                    }, a, b);
-                }, *this, rhs);
+                Visit(
+                    [](auto& a, auto& b) -> void {
+                        NPrivate::CallIfSame<void>(
+                            [](auto& x, auto& y) { DoSwap(x, y); }, a, b);
+                    },
+                    *this, rhs);
             } else {
                 std::swap(*this, rhs);
             }
@@ -220,24 +222,29 @@ private:
     }
 
     void DestroyImpl() noexcept {
-        Visit([](auto& value) {
-            using T = std::decay_t<decltype(value)>;
-            value.~T();
-        }, *this);
+        Visit(
+            [](auto& value) {
+                using T = std::decay_t<decltype(value)>;
+                value.~T();
+            },
+            *this);
     }
 
     template <std::size_t I, class... TArgs>
     TVariantAlternativeT<I, TVariant>& EmplaceImpl(TArgs&&... args) {
-        new (&Storage_) TVariantAlternativeT<I, TVariant>(std::forward<TArgs>(args)...);
+        new (&Storage_)
+            TVariantAlternativeT<I, TVariant>(std::forward<TArgs>(args)...);
         Index_ = I;
         return *ReinterpretAs<I>();
     }
 
     template <class Variant>
     void ForwardVariant(Variant&& rhs) {
-        Visit([&](auto&& value) {
-            new (this) TVariant(std::forward<decltype(value)>(value));
-        }, std::forward<Variant>(rhs));
+        Visit(
+            [&](auto&& value) {
+                new (this) TVariant(std::forward<decltype(value)>(value));
+            },
+            std::forward<Variant>(rhs));
     }
 
 private:
@@ -250,7 +257,8 @@ private:
 
     template <std::size_t I>
     const TVariantAlternativeT<I, TVariant>* ReinterpretAs() const noexcept {
-        return reinterpret_cast<const TVariantAlternativeT<I, TVariant>*>(&Storage_);
+        return reinterpret_cast<const TVariantAlternativeT<I, TVariant>*>(
+            &Storage_);
     }
 
 private:
@@ -263,11 +271,14 @@ bool operator==(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
     if (a.index() != b.index()) {
         return false;
     }
-    return a.valueless_by_exception() || Visit([](const auto& a, const auto& b) {
-        return NPrivate::CallIfSame<bool>([](const auto& x, const auto& y) {
-            return x == y;
-        }, a, b);
-    }, a, b);
+    return a.valueless_by_exception() ||
+           Visit(
+               [](const auto& a, const auto& b) {
+                   return NPrivate::CallIfSame<bool>(
+                       [](const auto& x, const auto& y) { return x == y; }, a,
+                       b);
+               },
+               a, b);
 }
 
 template <class... Ts>
@@ -277,11 +288,14 @@ bool operator!=(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
     if (a.index() != b.index()) {
         return true;
     }
-    return !a.valueless_by_exception() && Visit([](const auto& a, const auto& b) {
-        return NPrivate::CallIfSame<bool>([](const auto& x, const auto& y) {
-            return x != y;
-        }, a, b);
-    }, a, b);
+    return !a.valueless_by_exception() &&
+           Visit(
+               [](const auto& a, const auto& b) {
+                   return NPrivate::CallIfSame<bool>(
+                       [](const auto& x, const auto& y) { return x != y; }, a,
+                       b);
+               },
+               a, b);
 }
 
 template <class... Ts>
@@ -293,11 +307,12 @@ bool operator<(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
         return true;
     }
     if (a.index() == b.index()) {
-        return Visit([](const auto& a, const auto& b) {
-            return NPrivate::CallIfSame<bool>([](const auto& x, const auto& y) {
-                return x < y;
-            }, a, b);
-        }, a, b);
+        return Visit(
+            [](const auto& a, const auto& b) {
+                return NPrivate::CallIfSame<bool>(
+                    [](const auto& x, const auto& y) { return x < y; }, a, b);
+            },
+            a, b);
     }
     return a.index() < b.index();
 }
@@ -313,11 +328,12 @@ bool operator>(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
         return true;
     }
     if (a.index() == b.index()) {
-        return Visit([](const auto& a, const auto& b) -> bool {
-            return NPrivate::CallIfSame<bool>([](const auto& x, const auto& y) {
-                return x > y;
-            }, a, b);
-        }, a, b);
+        return Visit(
+            [](const auto& a, const auto& b) -> bool {
+                return NPrivate::CallIfSame<bool>(
+                    [](const auto& x, const auto& y) { return x > y; }, a, b);
+            },
+            a, b);
     }
     return a.index() > b.index();
 }
@@ -333,11 +349,12 @@ bool operator<=(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
         return false;
     }
     if (a.index() == b.index()) {
-        return Visit([](const auto& a, const auto& b) {
-            return NPrivate::CallIfSame<bool>([](const auto& x, const auto& y) {
-                return x <= y;
-            }, a, b);
-        }, a, b);
+        return Visit(
+            [](const auto& a, const auto& b) {
+                return NPrivate::CallIfSame<bool>(
+                    [](const auto& x, const auto& y) { return x <= y; }, a, b);
+            },
+            a, b);
     }
     return a.index() < b.index();
 }
@@ -353,15 +370,15 @@ bool operator>=(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
         return false;
     }
     if (a.index() == b.index()) {
-        return Visit([](const auto& a, const auto& b) {
-            return NPrivate::CallIfSame<bool>([](const auto& x, const auto& y) {
-                return x >= y;
-            }, a, b);
-        }, a, b);
+        return Visit(
+            [](const auto& a, const auto& b) {
+                return NPrivate::CallIfSame<bool>(
+                    [](const auto& x, const auto& y) { return x >= y; }, a, b);
+            },
+            a, b);
     }
     return a.index() > b.index();
 }
-
 
 namespace NPrivate {
 
@@ -457,24 +474,12 @@ auto GetIf(const TVariant<Ts...>* v) noexcept
 
 struct TMonostate {};
 
-constexpr bool operator<(TMonostate, TMonostate) noexcept {
-    return false;
-}
-constexpr bool operator>(TMonostate, TMonostate) noexcept {
-    return false;
-}
-constexpr bool operator<=(TMonostate, TMonostate) noexcept {
-    return true;
-}
-constexpr bool operator>=(TMonostate, TMonostate) noexcept {
-    return true;
-}
-constexpr bool operator==(TMonostate, TMonostate) noexcept {
-    return true;
-}
-constexpr bool operator!=(TMonostate, TMonostate) noexcept {
-    return false;
-}
+constexpr bool operator<(TMonostate, TMonostate) noexcept { return false; }
+constexpr bool operator>(TMonostate, TMonostate) noexcept { return false; }
+constexpr bool operator<=(TMonostate, TMonostate) noexcept { return true; }
+constexpr bool operator>=(TMonostate, TMonostate) noexcept { return true; }
+constexpr bool operator==(TMonostate, TMonostate) noexcept { return true; }
+constexpr bool operator!=(TMonostate, TMonostate) noexcept { return false; }
 
 namespace NPrivate {
 
@@ -490,7 +495,8 @@ const meta::type_pack_element_t<I, Ts...>& TVariantAccessor::Get(
 }
 
 template <std::size_t I, class... Ts>
-meta::type_pack_element_t<I, Ts...>&& TVariantAccessor::Get(TVariant<Ts...>&& v) {
+meta::type_pack_element_t<I, Ts...>&& TVariantAccessor::Get(
+    TVariant<Ts...>&& v) {
     return std::move(*v.template ReinterpretAs<I>());
 }
 
@@ -501,7 +507,8 @@ const meta::type_pack_element_t<I, Ts...>&& TVariantAccessor::Get(
 }
 
 template <class... Ts>
-constexpr std::size_t TVariantAccessor::Index(const TVariant<Ts...>& v) noexcept {
+constexpr std::size_t TVariantAccessor::Index(
+    const TVariant<Ts...>& v) noexcept {
     return v.Index_;
 }
 

@@ -15,17 +15,21 @@ TEST_CASE("Smoking test", "[variant]") {
     }
 
     SECTION("Visitation") {
-        Visit([](auto&& value) {
-            REQUIRE(std::is_same<decltype(value), int&>::value);
-            value = 1;
-        }, v);
+        Visit(
+            [](auto&& value) {
+                REQUIRE(std::is_same<decltype(value), int&>::value);
+                value = 1;
+            },
+            v);
         REQUIRE(1 == Get<0>(v));
     }
 
     SECTION("Visitation of rvalue") {
-        Visit([](auto&& value) {
-            REQUIRE(std::is_same<decltype(value), int&&>::value);
-        }, std::move(v));
+        Visit(
+            [](auto&& value) {
+                REQUIRE(std::is_same<decltype(value), int&&>::value);
+            },
+            std::move(v));
     }
 
     auto sumVisiter = [](auto&& value) -> TVar { return value + value; };

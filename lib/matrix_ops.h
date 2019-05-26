@@ -48,7 +48,7 @@ constexpr auto flat_to_normal_index(std::index_sequence<>,
 template <std::size_t index, std::size_t size, std::size_t... sizes,
           std::size_t... acc>
 constexpr auto flat_to_normal_index(std::index_sequence<size, sizes...>,
-                                 std::index_sequence<acc...> = {}) {
+                                    std::index_sequence<acc...> = {}) {
     return flat_to_normal_index<index / size>(
         std::index_sequence<sizes...>{},
         std::index_sequence<acc..., index % size>{});
