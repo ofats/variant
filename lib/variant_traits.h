@@ -83,7 +83,7 @@ ReturnType UnwrapIndexes(FRef f, VRefs... vs, std::index_sequence<ids...>) {
 // Normal case (when no one variant is valueless by exception).
 template <class ReturnType, class Indexes, bool inBoundaries, class FRef,
           class... VRefs>
-constexpr std::enable_if_t<inBoundaries, ReturnType> VisitImplImpl(
+constexpr std::enable_if_t<inBoundaries, ReturnType> VisitConcrete(
     FRef f, VRefs... vs) {
     return UnwrapIndexes<ReturnType, FRef, VRefs...>(
         std::forward<FRef>(f), std::forward<VRefs>(vs)..., Indexes{});
@@ -92,13 +92,13 @@ constexpr std::enable_if_t<inBoundaries, ReturnType> VisitImplImpl(
 // Boundaries case (when some of variants is valueless by exception).
 template <class ReturnType, class Indexes, bool inBoundaries, class FRef,
           class... VRefs>
-constexpr std::enable_if_t<!inBoundaries, ReturnType> VisitImplImpl(FRef,
+constexpr std::enable_if_t<!inBoundaries, ReturnType> VisitConcrete(FRef,
                                                                     VRefs...) {
     throw TBadVariantAccess{};
 }
 
 template <class F, class... Vs, class... IndexPacks>
-decltype(auto) VisitImpl(F&& f, meta::type_pack<IndexPacks...>, Vs&&... vs) {
+decltype(auto) Visit(F&& f, meta::type_pack<IndexPacks...>, Vs&&... vs) {
     using ReturnType =
         meta::invoke_result_t<F&&, decltype(TVariantAccessor::Get<0>(
                                        std::declval<Vs&&>()))...>;
@@ -109,7 +109,7 @@ decltype(auto) VisitImpl(F&& f, meta::type_pack<IndexPacks...>, Vs&&... vs) {
         std::index_sequence<1 + TSize<std::decay_t<Vs>>::value...>;
 
     constexpr LambdaType handlers[] = {
-        VisitImplImpl<ReturnType, IndexPacks,
+        VisitConcrete<ReturnType, IndexPacks,
                       matops::check_boundaries(IndexPacks{}, RealSizes{}), F&&,
                       Vs&&...>...};
 

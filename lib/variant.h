@@ -39,7 +39,7 @@ constexpr decltype(auto) Visit(F&& f, Vs&&... vs) {
 
     constexpr auto matrixSize = matops::matrix_size(matrixDimensionsSizes);
 
-    return NPrivate::VisitImpl(
+    return NPrivate::Visit(
         std::forward<F>(f),
         matops::build_all_matrix_indexes(matrixDimensionsSizes),
         std::forward<Vs>(vs)...);
