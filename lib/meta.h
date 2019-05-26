@@ -77,9 +77,17 @@ template <class... Bs>
 using conjunction =
     std::integral_constant<bool, detail::conjunction_impl<Bs...>()>;
 
+// aka std::conjunction_v
+template <class... Bs>
+constexpr bool conjunction_v = conjunction<Bs...>::value;
+
 // aka std::negation
 template <class B>
 using negation = std::integral_constant<bool, !B::value>;
+
+// aka std::negation_v
+template <class B>
+constexpr bool negation_v = negation<B>::value;
 
 namespace detail {
 
@@ -126,5 +134,17 @@ using type_pack_element_t = typename type_pack_element<I, Ts...>::type;
 
 static_assert(
     std::is_same<type_pack_element_t<1, int, char, double>, char>::value, "");
+
+// Given some type, calculates the number of template parameters of that type.
+template <class C>
+struct template_parameters_count;
+
+template <class... Ts, template <class...> class C>
+struct template_parameters_count<C<Ts...>>
+    : std::integral_constant<std::size_t, sizeof...(Ts)> {};
+
+template <class C>
+constexpr std::size_t template_parameters_count_v =
+    template_parameters_count<C>::value;
 
 }  // namespace meta

@@ -15,29 +15,34 @@ template <std::size_t I>
 constexpr TInPlaceIndex<I> IN_PLACE_INDEX; // aka std::in_place_index
 
 template <std::size_t I, class V>
-struct TVariantAlternative;
+struct TVariantAlternative;  // aka std::variant_alternative
 
 template <std::size_t I, class... Ts>
-struct TVariantAlternative<I, TVariant<Ts...>> : meta::type_pack_element<I, Ts...> {};
+struct TVariantAlternative<I, TVariant<Ts...>>
+    : meta::type_pack_element<I, Ts...> {};
 
 template <std::size_t I, class V>
 using TVariantAlternativeT =
     typename TVariantAlternative<I, V>::type;  // aka std::variant_alternative_t
 
 template <class V>
-using TVariantSize = NPrivate::TSize<V>; // aka std::variant_size
+struct TVariantSize;  // aka std::variant_size
+
+template <class... Ts>
+struct TVariantSize<TVariant<Ts...>>
+    : meta::template_parameters_count<TVariant<Ts...>> {};
 
 template <class V>
-constexpr std::size_t VARIANT_SIZE_V = TVariantSize<V>::value; // aka std::variant_size_v
+constexpr std::size_t VARIANT_SIZE_V =
+    TVariantSize<V>::value;  // aka std::variant_size_v
 
-constexpr std::size_t VARIANT_NPOS = NPrivate::T_NPOS; // aka std::variant_npos
+constexpr std::size_t VARIANT_NPOS = NPrivate::T_NPOS;  // aka std::variant_npos
 
 template <class F, class... Vs>
-constexpr decltype(auto) Visit(F&& f, Vs&&... vs) {
+constexpr auto Visit(F&& f, Vs&&... vs)
+    -> NPrivate::TReturnTypeT<F&&, Vs&&...> {
     constexpr auto matrixDimensionsSizes =
         std::index_sequence<1 + VARIANT_SIZE_V<std::decay_t<Vs>>...>{};
-
-    constexpr auto matrixSize = matops::matrix_size(matrixDimensionsSizes);
 
     return NPrivate::Visit(
         std::forward<F>(f),

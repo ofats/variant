@@ -144,4 +144,16 @@ TEST_CASE("Static test", "[variant]") {
         REQUIRE(ILL_FORMED(TVar2, v, v.template emplace<2>()));
         REQUIRE(ILL_FORMED(TVar2, v, v.template emplace<double>()));
     }
+
+    SECTION("Check Visit") {
+        // Invocation to visit must be a valid expression of the same type and
+        // value category, for all combinations of alternative types of all
+        // variants.
+        auto nothingOp = [](auto &&) -> void {};
+        REQUIRE(WELL_FORMED(TVar, v, Visit(nothingOp, v)));
+        auto returnOp = [](auto&& value) { return value; };
+        REQUIRE(ILL_FORMED(TVar, v, Visit(returnOp, v)));
+        auto notAllTypesOp = [](int) {};
+        REQUIRE(ILL_FORMED(TVar2, v, Visit(notAllTypesOp, v)));
+    }
 }

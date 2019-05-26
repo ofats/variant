@@ -12,13 +12,6 @@ class TBadVariantAccess : public std::exception {};
 
 namespace NPrivate {
 
-template <class V>
-struct TSize;
-
-template <class... Ts>
-struct TSize<TVariant<Ts...>>
-    : std::integral_constant<std::size_t, sizeof...(Ts)> {};
-
 struct TVariantAccessor {
     template <std::size_t I, class... Ts>
     static meta::type_pack_element_t<I, Ts...>& Get(TVariant<Ts...>& v);
@@ -74,6 +67,67 @@ struct TTypeTraits {
     using TNotEmpty = std::integral_constant<bool, (sizeof...(Ts) > 0)>;
 };
 
+template <class F, class Indexes, class... Vs>
+struct TSingleReturnType;
+
+template <class F, std::size_t... indexes, class... Vs>
+struct TSingleReturnType<F, std::index_sequence<indexes...>, Vs...>
+    : meta::invoke_result<F, decltype(TVariantAccessor::Get<indexes>(
+                                 std::declval<Vs>()))...> {};
+
+template <class F, class Indexes, class... Vs>
+using TSingleReturnTypeT = meta::subtype<TSingleReturnType<F, Indexes, Vs...>>;
+
+template <class T, class... Ts>
+constexpr bool TypesAreSame() {
+    return meta::conjunction<std::is_same<T, Ts>...>::value;
+}
+
+template <class F, class Indexes, class... Vs>
+struct TIsInvocable;
+
+template <class F, std::size_t... indexes, class... Vs>
+struct TIsInvocable<F, std::index_sequence<indexes...>, Vs...>
+    : meta::is_invocable<F, decltype(TVariantAccessor::Get<indexes>(
+                                std::declval<Vs>()))...> {};
+
+template <class F, bool typesAreSame, class... Vs>
+struct TReturnTypeIfSameResults
+    : meta::invoke_result<F, decltype(TVariantAccessor::Get<0>(
+                                 std::declval<Vs>()))...> {};
+
+template <class F, class... Vs>
+struct TReturnTypeIfSameResults<F, false, Vs...> {};
+
+template <class F, bool invokable, class IndexPacks, class... Vs>
+struct TReturnTypeIfInvocable {};
+
+template <class F, class... IndexPacks, class... Vs>
+struct TReturnTypeIfInvocable<F, true, meta::type_pack<IndexPacks...>, Vs...>
+    : TReturnTypeIfSameResults<
+          F, TypesAreSame<TSingleReturnTypeT<F, IndexPacks, Vs...>...>(),
+          Vs...> {};
+
+template <class F, class IndexPacks, class... Vs>
+struct TReturnTypeImpl;
+
+template <class F, class... IndexPacks, class... Vs>
+struct TReturnTypeImpl<F, meta::type_pack<IndexPacks...>, Vs...>
+    : TReturnTypeIfInvocable<
+          F, meta::conjunction_v<TIsInvocable<F, IndexPacks, Vs...>...>,
+          meta::type_pack<IndexPacks...>, Vs...> {};
+
+template <class F, class... Vs>
+struct TReturnType
+    : TReturnTypeImpl<F,
+                      decltype(matops::build_all_matrix_indexes(
+                          std::index_sequence<meta::template_parameters_count_v<
+                              std::decay_t<Vs>>...>{})),
+                      Vs...> {};
+
+template <class F, class... Vs>
+using TReturnTypeT = meta::subtype<TReturnType<F, Vs...>>;
+
 template <class ReturnType, class FRef, class... VRefs, std::size_t... ids>
 ReturnType UnwrapIndexes(FRef f, VRefs... vs, std::index_sequence<ids...>) {
     return std::forward<FRef>(f)(
@@ -98,15 +152,15 @@ constexpr std::enable_if_t<!inBoundaries, ReturnType> VisitConcrete(FRef,
 }
 
 template <class F, class... Vs, class... IndexPacks>
-decltype(auto) Visit(F&& f, meta::type_pack<IndexPacks...>, Vs&&... vs) {
-    using ReturnType =
-        meta::invoke_result_t<F&&, decltype(TVariantAccessor::Get<0>(
-                                       std::declval<Vs&&>()))...>;
+auto Visit(F&& f, meta::type_pack<IndexPacks...>, Vs&&... vs)
+    -> TReturnTypeT<F&&, Vs&&...> {
+    using ReturnType = TReturnTypeT<F&&, Vs&&...>;
     using LambdaType = ReturnType (*)(F&&, Vs && ...);
 
-    using RealSizes = std::index_sequence<TSize<std::decay_t<Vs>>::value...>;
-    using FakeSizes =
-        std::index_sequence<1 + TSize<std::decay_t<Vs>>::value...>;
+    using RealSizes = std::index_sequence<
+        meta::template_parameters_count_v<std::decay_t<Vs>>...>;
+    using FakeSizes = std::index_sequence<
+        1 + meta::template_parameters_count_v<std::decay_t<Vs>>...>;
 
     constexpr LambdaType handlers[] = {
         VisitConcrete<ReturnType, IndexPacks,
