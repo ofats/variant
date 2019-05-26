@@ -64,14 +64,14 @@ class TVariant {
 
     using T_0 = TVariantAlternativeT<0, TVariant>;
 
-    static_assert(NPrivate::TTypeTraits<Ts...>::TNoRefs::value,
+    static_assert(meta::conjunction_v<meta::negation<std::is_reference<Ts>>...>,
                   "TVariant type arguments cannot be references.");
-    static_assert(NPrivate::TTypeTraits<Ts...>::TNoVoids::value,
-                  "TVariant type arguments cannot be void.");
-    static_assert(NPrivate::TTypeTraits<Ts...>::TNoArrays::value,
+    static_assert(
+        meta::conjunction_v<meta::negation<std::is_same<Ts, void>>...>,
+        "TVariant type arguments cannot be void.");
+    static_assert(meta::conjunction_v<meta::negation<std::is_array<Ts>>...>,
                   "TVariant type arguments cannot be arrays.");
-    static_assert(NPrivate::TTypeTraits<Ts...>::TNotEmpty::value,
-                  "TVariant type list cannot be empty.");
+    static_assert(sizeof...(Ts) > 0, "TVariant type list cannot be empty.");
 
 public:
     TVariant() noexcept(std::is_nothrow_default_constructible<T_0>::value) {

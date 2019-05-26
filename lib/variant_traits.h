@@ -58,15 +58,6 @@ template <class X, class... Ts>
 struct TIndexOf : std::integral_constant<std::size_t, IndexOfImpl<X, Ts...>()> {
 };
 
-template <class... Ts>
-struct TTypeTraits {
-    using TNoRefs = meta::conjunction<meta::negation<std::is_reference<Ts>>...>;
-    using TNoVoids =
-        meta::conjunction<meta::negation<std::is_same<Ts, void>>...>;
-    using TNoArrays = meta::conjunction<meta::negation<std::is_array<Ts>>...>;
-    using TNotEmpty = std::integral_constant<bool, (sizeof...(Ts) > 0)>;
-};
-
 template <class F, class Indexes, class... Vs>
 struct TSingleReturnType;
 
