@@ -1,9 +1,8 @@
 #pragma once
 
+#include "util/algo.h"
 #include "variant/variant.h"
 
-#include <algorithm>
-#include <cassert>
 #include <memory>
 
 namespace static_evaluator {
@@ -23,24 +22,6 @@ struct binary_op {
 
     std::unique_ptr<calc_node> left_expr, right_expr;
 };
-
-namespace detail {
-
-inline double binpow(const double num, const std::int64_t st) {
-    if (st < 0) {
-        return 1.0 / binpow(num, -st);
-    }
-    if (0 == st) {
-        return 1.0;
-    }
-    double result = binpow(num * num, st >> 1);
-    if (st & 1) {
-        result *= num;
-    }
-    return result;
-}
-
-}  // namespace detail
 
 // `E` -> `E` + `T` | `E` - `T` | `T`
 // `T` -> `T` * `S` | `T` / `S` | `F`
@@ -94,8 +75,9 @@ inline double eval(const calc_node& n) {
             return eval(*value.left_expr) / eval(*value.right_expr);
         };
         auto operator()(const binary_op<'*', '*'>& value) {
-            return detail::binpow(eval(*value.left_expr),
-                                  eval(*value.right_expr));
+            return base::binpow(
+                eval(*value.left_expr),
+                static_cast<std::int64_t>(eval(*value.right_expr)));
         };
     };
     return Visit(eval_visitor{}, n);

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "variant/meta.h"
+#include "util/meta.h"
 
 #include <algorithm>
 #include <string>
@@ -40,7 +40,7 @@ input_data next(input_data&& data, const char (&s)[n]) {
 }
 
 template <class F>
-std::enable_if_t<meta::is_invocable_v<F, char>, input_data> next(
+std::enable_if_t<base::is_invocable_v<F, char>, input_data> next(
     input_data&& data, F f) {
     if (!f((*data.input)[data.cursor])) {
         throw std::runtime_error{make_fancy_error_log(data)};

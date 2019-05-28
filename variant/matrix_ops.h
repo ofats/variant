@@ -1,6 +1,6 @@
 #pragma once
 
-#include "meta.h"
+#include "util/meta.h"
 
 #include <utility>
 
@@ -120,7 +120,7 @@ namespace detail {
 template <std::size_t... indexes, class Sizes>
 constexpr auto build_all_matrix_indexes(std::index_sequence<indexes...>,
                                         Sizes sizes) {
-    return meta::type_pack<decltype(
+    return base::type_pack<decltype(
         matops::flat_to_normal_index<indexes>(sizes))...>{};
 }
 
@@ -144,7 +144,7 @@ constexpr auto build_all_matrix_indexes(Sizes sizes) {
 static_assert(
     std::is_same<
         decltype(build_all_matrix_indexes(std::index_sequence<3, 3>{})),
-        meta::type_pack<std::index_sequence<0, 0>, std::index_sequence<1, 0>,
+        base::type_pack<std::index_sequence<0, 0>, std::index_sequence<1, 0>,
                         std::index_sequence<2, 0>, std::index_sequence<0, 1>,
                         std::index_sequence<1, 1>, std::index_sequence<2, 1>,
                         std::index_sequence<0, 2>, std::index_sequence<1, 2>,
@@ -155,7 +155,7 @@ static_assert(
 static_assert(
     std::is_same<
         decltype(build_all_matrix_indexes(std::index_sequence<3, 3, 3>{})),
-        meta::type_pack<
+        base::type_pack<
             std::index_sequence<0, 0, 0>, std::index_sequence<1, 0, 0>,
             std::index_sequence<2, 0, 0>, std::index_sequence<0, 1, 0>,
             std::index_sequence<1, 1, 0>, std::index_sequence<2, 1, 0>,

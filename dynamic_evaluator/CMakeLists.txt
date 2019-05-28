@@ -10,7 +10,7 @@ set(SOURCE_FILES
 
 add_library(${PROJECT_NAME} ${SOURCE_FILES} ${HEADER_FILES})
 
-target_link_libraries(${PROJECT_NAME} variant parser)
+target_link_libraries(${PROJECT_NAME} parser variant util)
 
 add_subdirectory(bin)
 add_subdirectory(ut)

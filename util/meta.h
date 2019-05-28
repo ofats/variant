@@ -3,7 +3,7 @@
 #include <type_traits>
 #include <utility>
 
-namespace meta {
+namespace base {
 
 template <class T>
 using subtype = typename T::type;
@@ -147,4 +147,4 @@ template <class C>
 constexpr std::size_t template_parameters_count_v =
     template_parameters_count<C>::value;
 
-}  // namespace meta
+}  // namespace base

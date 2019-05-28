@@ -1,7 +1,6 @@
 #pragma once
 
 #include "matrix_ops.h"
-#include "meta.h"
 
 #include <exception>
 
@@ -14,17 +13,17 @@ namespace NPrivate {
 
 struct TVariantAccessor {
     template <std::size_t I, class... Ts>
-    static meta::type_pack_element_t<I, Ts...>& Get(TVariant<Ts...>& v);
+    static base::type_pack_element_t<I, Ts...>& Get(TVariant<Ts...>& v);
 
     template <std::size_t I, class... Ts>
-    static const meta::type_pack_element_t<I, Ts...>& Get(
+    static const base::type_pack_element_t<I, Ts...>& Get(
         const TVariant<Ts...>& v);
 
     template <std::size_t I, class... Ts>
-    static meta::type_pack_element_t<I, Ts...>&& Get(TVariant<Ts...>&& v);
+    static base::type_pack_element_t<I, Ts...>&& Get(TVariant<Ts...>&& v);
 
     template <std::size_t I, class... Ts>
-    static const meta::type_pack_element_t<I, Ts...>&& Get(
+    static const base::type_pack_element_t<I, Ts...>&& Get(
         const TVariant<Ts...>&& v);
 
     template <class... Ts>
@@ -63,15 +62,15 @@ struct TSingleReturnType;
 
 template <class F, std::size_t... indexes, class... Vs>
 struct TSingleReturnType<F, std::index_sequence<indexes...>, Vs...>
-    : meta::invoke_result<F, decltype(TVariantAccessor::Get<indexes>(
+    : base::invoke_result<F, decltype(TVariantAccessor::Get<indexes>(
                                  std::declval<Vs>()))...> {};
 
 template <class F, class Indexes, class... Vs>
-using TSingleReturnTypeT = meta::subtype<TSingleReturnType<F, Indexes, Vs...>>;
+using TSingleReturnTypeT = base::subtype<TSingleReturnType<F, Indexes, Vs...>>;
 
 template <class T, class... Ts>
 constexpr bool TypesAreSame() {
-    return meta::conjunction<std::is_same<T, Ts>...>::value;
+    return base::conjunction<std::is_same<T, Ts>...>::value;
 }
 
 template <class F, class Indexes, class... Vs>
@@ -79,12 +78,12 @@ struct TIsInvocable;
 
 template <class F, std::size_t... indexes, class... Vs>
 struct TIsInvocable<F, std::index_sequence<indexes...>, Vs...>
-    : meta::is_invocable<F, decltype(TVariantAccessor::Get<indexes>(
+    : base::is_invocable<F, decltype(TVariantAccessor::Get<indexes>(
                                 std::declval<Vs>()))...> {};
 
 template <class F, bool typesAreSame, class... Vs>
 struct TReturnTypeIfSameResults
-    : meta::invoke_result<F, decltype(TVariantAccessor::Get<0>(
+    : base::invoke_result<F, decltype(TVariantAccessor::Get<0>(
                                  std::declval<Vs>()))...> {};
 
 template <class F, class... Vs>
@@ -94,7 +93,7 @@ template <class F, bool invokable, class IndexPacks, class... Vs>
 struct TReturnTypeIfInvocable {};
 
 template <class F, class... IndexPacks, class... Vs>
-struct TReturnTypeIfInvocable<F, true, meta::type_pack<IndexPacks...>, Vs...>
+struct TReturnTypeIfInvocable<F, true, base::type_pack<IndexPacks...>, Vs...>
     : TReturnTypeIfSameResults<
           F, TypesAreSame<TSingleReturnTypeT<F, IndexPacks, Vs...>...>(),
           Vs...> {};
@@ -103,21 +102,21 @@ template <class F, class IndexPacks, class... Vs>
 struct TReturnTypeImpl;
 
 template <class F, class... IndexPacks, class... Vs>
-struct TReturnTypeImpl<F, meta::type_pack<IndexPacks...>, Vs...>
+struct TReturnTypeImpl<F, base::type_pack<IndexPacks...>, Vs...>
     : TReturnTypeIfInvocable<
-          F, meta::conjunction_v<TIsInvocable<F, IndexPacks, Vs...>...>,
-          meta::type_pack<IndexPacks...>, Vs...> {};
+          F, base::conjunction_v<TIsInvocable<F, IndexPacks, Vs...>...>,
+          base::type_pack<IndexPacks...>, Vs...> {};
 
 template <class F, class... Vs>
 struct TReturnType
     : TReturnTypeImpl<F,
                       decltype(matops::build_all_matrix_indexes(
-                          std::index_sequence<meta::template_parameters_count_v<
+                          std::index_sequence<base::template_parameters_count_v<
                               std::decay_t<Vs>>...>{})),
                       Vs...> {};
 
 template <class F, class... Vs>
-using TReturnTypeT = meta::subtype<TReturnType<F, Vs...>>;
+using TReturnTypeT = base::subtype<TReturnType<F, Vs...>>;
 
 template <class ReturnType, class FRef, class... VRefs, std::size_t... ids>
 ReturnType UnwrapIndexes(FRef f, VRefs... vs, std::index_sequence<ids...>) {
@@ -143,15 +142,15 @@ constexpr std::enable_if_t<!inBoundaries, ReturnType> VisitConcrete(FRef,
 }
 
 template <class F, class... Vs, class... IndexPacks>
-auto Visit(F&& f, meta::type_pack<IndexPacks...>, Vs&&... vs)
+auto Visit(F&& f, base::type_pack<IndexPacks...>, Vs&&... vs)
     -> TReturnTypeT<F&&, Vs&&...> {
     using ReturnType = TReturnTypeT<F&&, Vs&&...>;
     using LambdaType = ReturnType (*)(F&&, Vs && ...);
 
     using RealSizes = std::index_sequence<
-        meta::template_parameters_count_v<std::decay_t<Vs>>...>;
+        base::template_parameters_count_v<std::decay_t<Vs>>...>;
     using FakeSizes = std::index_sequence<
-        1 + meta::template_parameters_count_v<std::decay_t<Vs>>...>;
+        1 + base::template_parameters_count_v<std::decay_t<Vs>>...>;
 
     constexpr LambdaType handlers[] = {
         VisitConcrete<ReturnType, IndexPacks,

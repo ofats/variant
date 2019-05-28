@@ -1,8 +1,8 @@
 #pragma once
 
+#include "util/algo.h"
 #include "variant/variant.h"
 
-#include <algorithm>
 #include <memory>
 
 namespace dynamic_evaluator {
@@ -97,26 +97,14 @@ public:
     }
 };
 
-inline double binpow(const double num, const std::int64_t st) {
-    if (st < 0) {
-        return 1.0 / binpow(num, -st);
-    }
-    if (0 == st) {
-        return 1.0;
-    }
-    double result = binpow(num * num, st >> 1);
-    if (st & 1) {
-        result *= num;
-    }
-    return result;
-}
-
 class pow_node final : public binary_node {
 public:
     using binary_node::binary_node;
 
     double eval() override {
-        return binpow(this->left_expr_->eval(), this->right_expr_->eval());
+        return base::binpow(
+            this->left_expr_->eval(),
+            static_cast<std::int64_t>(this->right_expr_->eval()));
     }
 
     std::string print(const int indent = 0) override {

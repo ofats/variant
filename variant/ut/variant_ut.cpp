@@ -93,7 +93,7 @@ namespace {
 
 template <class Arg, class F>
 constexpr bool CheckCallable(F&&) {
-    return meta::is_invocable_v<F&&, Arg>;
+    return base::is_invocable_v<F&&, Arg>;
 }
 
 #define WELL_FORMED(TYPE, VAR, EXP) \
