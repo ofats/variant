@@ -14,4 +14,5 @@ include_directories(./)
 
 add_subdirectory(variant)
 add_subdirectory(static_evaluator)
+add_subdirectory(dynamic_evaluator)
 add_subdirectory(catch)
