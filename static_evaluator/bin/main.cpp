@@ -5,6 +5,8 @@
 int main() {
     namespace evaler = static_evaluator;
     std::string expr;
+    std::cout << "> ";
+    std::cout.flush();
     while (std::getline(std::cin, expr)) {
         if (expr.empty()) {
             break;
@@ -19,6 +21,8 @@ int main() {
             std::cerr << e.what() << std::endl;
 #endif
         }
+        std::cout << "> ";
+        std::cout.flush();
     }
     return 0;
 }

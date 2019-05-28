@@ -4,8 +4,10 @@
 
 #include <iostream>
 
+using namespace Catch::literals;
+namespace st_eval = static_evaluator;
+
 TEST_CASE("Print test", "[static_evaluator]") {
-    namespace st_eval = static_evaluator;
     st_eval::calc_node node = 5.0;
     auto result = st_eval::print(node);
     std::cout << result;
@@ -19,9 +21,30 @@ TEST_CASE("Print test", "[static_evaluator]") {
 }
 
 TEST_CASE("Parse test", "[static_evaluator]") {
-    namespace st_eval = static_evaluator;
-    const auto node = st_eval::parse("1 +  2 + 4 / 2 + 8 *(1- 2)");
+    const auto node = st_eval::parse("1 +  2 + 4 / 2 + 8 *(1- 2) + 2**8");
     std::cout << st_eval::print(node);
-    using namespace Catch::literals;
-    REQUIRE(st_eval::eval(node) == -3_a);
+    REQUIRE(st_eval::eval(node) == 253_a);
+}
+
+TEST_CASE("Simple test", "[static_evaluator]") {
+    SECTION("Sum test") {
+        const auto node = st_eval::parse("2 + 3");
+        REQUIRE(st_eval::eval(node) == 5_a);
+    }
+    SECTION("Sub test") {
+        const auto node = st_eval::parse("2 - 3");
+        REQUIRE(st_eval::eval(node) == -1_a);
+    }
+    SECTION("Mul test") {
+        const auto node = st_eval::parse("2 * 3");
+        REQUIRE(st_eval::eval(node) == 6_a);
+    }
+    SECTION("Div test") {
+        const auto node = st_eval::parse("3 / 2");
+        REQUIRE(st_eval::eval(node) == 1.5_a);
+    }
+    SECTION("Pow test") {
+        const auto node = st_eval::parse("2 ** 3");
+        REQUIRE(st_eval::eval(node) == 8_a);
+    }
 }

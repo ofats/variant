@@ -28,7 +28,7 @@ calc_node e_nonterm(input_data& input) {
 }
 
 calc_node t_nonterm(input_data& input) {
-    auto result = f_nonterm(input);
+    auto result = s_nonterm(input);
     input = skip_spaces(std::move(input));
     while ('*' == peek(input) || '/' == peek(input)) {
         switch (peek(input)) {
@@ -36,17 +36,35 @@ calc_node t_nonterm(input_data& input) {
                 input = skip_spaces(next(std::move(input), '*'));
                 result.emplace<binary_op<'*'>>(
                     std::make_unique<calc_node>(std::move(result)),
-                    std::make_unique<calc_node>(f_nonterm(input)));
+                    std::make_unique<calc_node>(s_nonterm(input)));
                 input = skip_spaces(std::move(input));
                 break;
             case '/':
                 input = skip_spaces(next(std::move(input), '/'));
                 result.emplace<binary_op<'/'>>(
                     std::make_unique<calc_node>(std::move(result)),
-                    std::make_unique<calc_node>(f_nonterm(input)));
+                    std::make_unique<calc_node>(s_nonterm(input)));
                 input = skip_spaces(std::move(input));
                 break;
         }
+    }
+    return result;
+}
+
+calc_node s_nonterm(input_data& input) {
+    auto result = f_nonterm(input);
+    input = skip_spaces(std::move(input));
+    if ('*' == peek(input)) {
+        input = next(std::move(input), '*');
+        if ('*' != peek(input)) {
+            input = unnext(std::move(input));
+            return result;
+        }
+        input = skip_spaces(next(std::move(input), '*'));
+        return binary_op<'*', '*'>{
+            std::make_unique<calc_node>(std::move(result)),
+            std::make_unique<calc_node>(s_nonterm(input))
+        };
     }
     return result;
 }
@@ -110,7 +128,7 @@ calc_node n_nonterm(input_data& input) {
         result *= 10;
         if (result < min_val + digit) {
             throw std::runtime_error{make_fancy_error_log(input) +
-                                     "\nSigned integer overflow"};
+                                     "\nSigned integer underflow"};
         }
         result += digit;
         input = next(std::move(input), is_digit);

@@ -8,13 +8,13 @@
 
 namespace static_evaluator {
 
-template <char sign>
+template <char... signs>
 struct binary_op;
 
 using calc_node = TVariant<double, binary_op<'+'>, binary_op<'-'>,
-                           binary_op<'*'>, binary_op<'/'>>;
+                           binary_op<'*'>, binary_op<'/'>, binary_op<'*', '*'>>;
 
-template <char sign>
+template <char... signs>
 struct binary_op {
     binary_op(std::unique_ptr<calc_node> a, std::unique_ptr<calc_node> b)
         : left_expr(std::move(a)), right_expr(std::move(b)) {}
@@ -39,6 +39,10 @@ struct print_visitor {
                std::string(1, sign) + '\n' +
                print(*value.right_expr, indent + 1);
     }
+    auto operator()(const binary_op<'*', '*'>& value) {
+        return print(*value.left_expr, indent + 1) + std::string(indent, '\t') +
+               "**" + '\n' + print(*value.right_expr, indent + 1);
+    }
 };
 
 inline std::string print(const calc_node& n, const int indent) {
@@ -47,7 +51,8 @@ inline std::string print(const calc_node& n, const int indent) {
 }
 
 // `E` -> `E` + `T` | `E` - `T` | `T`
-// `T` -> `T` * `F` | `T` / `F` | `F`
+// `T` -> `T` * `S` | `T` / `S` | `F`
+// `S` -> `F` ** `S` | `F`
 // `F` -> `P` | - 'N' | ( `E` )
 
 namespace detail {
@@ -95,6 +100,11 @@ std::enable_if_t<meta::is_invocable_v<F, char>, input_data> next(
     return data;
 }
 
+inline input_data unnext(input_data&& data) {
+    --data.cursor;
+    return data;
+}
+
 inline input_data skip_spaces(input_data&& data) {
     while (std::isspace((*data.input)[data.cursor])) {
         ++data.cursor;
@@ -104,9 +114,24 @@ inline input_data skip_spaces(input_data&& data) {
 
 calc_node e_nonterm(input_data& input);
 calc_node t_nonterm(input_data& input);
+calc_node s_nonterm(input_data& input);
 calc_node f_nonterm(input_data& input);
 calc_node p_nonterm(input_data& input);
 calc_node n_nonterm(input_data& input);
+
+inline double binpow(const double num, const std::int64_t st) {
+    if (st < 0) {
+        return 1.0 / binpow(num, -st);
+    }
+    if (0 == st) {
+        return 1.0;
+    }
+    double result = binpow(num * num, st >> 1);
+    if (st & 1) {
+        result *= num;
+    }
+    return result;
+}
 
 }  // namespace detail
 
@@ -134,6 +159,10 @@ inline double eval(const calc_node& n) {
         };
         auto operator()(const binary_op<'/'>& value) {
             return eval(*value.left_expr) / eval(*value.right_expr);
+        };
+        auto operator()(const binary_op<'*', '*'>& value) {
+            return detail::binpow(eval(*value.left_expr),
+                                  eval(*value.right_expr));
         };
     };
     return Visit(eval_visitor{}, n);
