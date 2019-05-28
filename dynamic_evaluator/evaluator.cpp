@@ -1,7 +1,15 @@
 #include "evaluator.h"
 
+#include "parser/parser.h"
+
 namespace dynamic_evaluator {
-namespace detail {
+
+std::unique_ptr<calc_node> e_nonterm(prs::input_data& input);
+std::unique_ptr<calc_node> t_nonterm(prs::input_data& input);
+std::unique_ptr<calc_node> s_nonterm(prs::input_data& input);
+std::unique_ptr<calc_node> f_nonterm(prs::input_data& input);
+std::unique_ptr<calc_node> p_nonterm(prs::input_data& input);
+std::unique_ptr<calc_node> n_nonterm(prs::input_data& input);
 
 std::unique_ptr<calc_node> e_nonterm(prs::input_data& input) {
     auto result = t_nonterm(input);
@@ -129,5 +137,14 @@ std::unique_ptr<calc_node> n_nonterm(prs::input_data& input) {
     return std::make_unique<value_node>(static_cast<double>(result));
 }
 
-}  // namespace detail
+std::unique_ptr<calc_node> parse(const std::string& input) {
+    auto data = prs::skip_spaces(prs::input_data{&input, 0});
+    auto result = e_nonterm(data);
+    if (data.cursor != input.size()) {
+        throw std::runtime_error{prs::make_fancy_error_log(data) +
+                                 "\nUnexpected symbol"};
+    }
+    return result;
+}
+
 }  // namespace dynamic_evaluator

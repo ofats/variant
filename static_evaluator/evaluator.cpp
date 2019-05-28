@@ -1,7 +1,15 @@
 #include "evaluator.h"
 
+#include "parser/parser.h"
+
 namespace static_evaluator {
-namespace detail {
+
+calc_node e_nonterm(prs::input_data& input);
+calc_node t_nonterm(prs::input_data& input);
+calc_node s_nonterm(prs::input_data& input);
+calc_node f_nonterm(prs::input_data& input);
+calc_node p_nonterm(prs::input_data& input);
+calc_node n_nonterm(prs::input_data& input);
 
 calc_node e_nonterm(prs::input_data& input) {
     auto result = t_nonterm(input);
@@ -135,5 +143,14 @@ calc_node n_nonterm(prs::input_data& input) {
     return calc_node{static_cast<double>(result)};
 }
 
-}  // namespace detail
+calc_node parse(const std::string& input) {
+    auto data = prs::skip_spaces(prs::input_data{&input, 0});
+    auto result = e_nonterm(data);
+    if (data.cursor != input.size()) {
+        throw std::runtime_error{prs::make_fancy_error_log(data) +
+                                 "\nUnexpected symbol"};
+    }
+    return result;
+}
+
 }  // namespace static_evaluator

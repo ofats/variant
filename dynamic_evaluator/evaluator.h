@@ -1,10 +1,8 @@
 #pragma once
 
 #include "variant/variant.h"
-#include "parser/parser.h"
 
 #include <algorithm>
-#include <cassert>
 #include <memory>
 
 namespace dynamic_evaluator {
@@ -131,26 +129,6 @@ public:
 // `T` -> `T` * `S` | `T` / `S` | `F`
 // `S` -> `F` ** `S` | `F`
 // `F` -> `P` | - 'N' | ( `E` )
-
-namespace detail {
-
-std::unique_ptr<calc_node> e_nonterm(prs::input_data& input);
-std::unique_ptr<calc_node> t_nonterm(prs::input_data& input);
-std::unique_ptr<calc_node> s_nonterm(prs::input_data& input);
-std::unique_ptr<calc_node> f_nonterm(prs::input_data& input);
-std::unique_ptr<calc_node> p_nonterm(prs::input_data& input);
-std::unique_ptr<calc_node> n_nonterm(prs::input_data& input);
-
-}  // namespace detail
-
-inline std::unique_ptr<calc_node> parse(const std::string& input) {
-    auto data = prs::skip_spaces(prs::input_data{&input, 0});
-    auto result = detail::e_nonterm(data);
-    if (data.cursor != input.size()) {
-        throw std::runtime_error{prs::make_fancy_error_log(data) +
-                                 "\nUnexpected symbol"};
-    }
-    return result;
-}
+std::unique_ptr<calc_node> parse(const std::string& input);
 
 }  // namespace dynamic_evaluator

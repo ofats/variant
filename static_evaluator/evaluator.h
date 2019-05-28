@@ -1,6 +1,5 @@
 #pragma once
 
-#include "parser/parser.h"
 #include "variant/variant.h"
 
 #include <algorithm>
@@ -25,19 +24,7 @@ struct binary_op {
     std::unique_ptr<calc_node> left_expr, right_expr;
 };
 
-// `E` -> `E` + `T` | `E` - `T` | `T`
-// `T` -> `T` * `S` | `T` / `S` | `F`
-// `S` -> `F` ** `S` | `F`
-// `F` -> `P` | - 'N' | ( `E` )
-
 namespace detail {
-
-calc_node e_nonterm(prs::input_data& input);
-calc_node t_nonterm(prs::input_data& input);
-calc_node s_nonterm(prs::input_data& input);
-calc_node f_nonterm(prs::input_data& input);
-calc_node p_nonterm(prs::input_data& input);
-calc_node n_nonterm(prs::input_data& input);
 
 inline double binpow(const double num, const std::int64_t st) {
     if (st < 0) {
@@ -55,17 +42,15 @@ inline double binpow(const double num, const std::int64_t st) {
 
 }  // namespace detail
 
-inline calc_node parse(const std::string& input) {
-    auto data = prs::skip_spaces(prs::input_data{&input, 0});
-    auto result = detail::e_nonterm(data);
-    if (data.cursor != input.size()) {
-        throw std::runtime_error{prs::make_fancy_error_log(data) +
-                                 "\nUnexpected symbol"};
-    }
-    return result;
-}
+// `E` -> `E` + `T` | `E` - `T` | `T`
+// `T` -> `T` * `S` | `T` / `S` | `F`
+// `S` -> `F` ** `S` | `F`
+// `F` -> `P` | - 'N' | ( `E` )
+calc_node parse(const std::string& input);
 
 std::string print(const calc_node& n, const int indent = 0);
+
+namespace detail {
 
 struct print_visitor {
     print_visitor(const int indent) : indent(indent) {}
@@ -86,8 +71,10 @@ struct print_visitor {
     }
 };
 
+}  // namespace detail
+
 inline std::string print(const calc_node& n, const int indent) {
-    auto vis = print_visitor{indent};
+    auto vis = detail::print_visitor{indent};
     return Visit(vis, n);
 }
 
