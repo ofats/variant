@@ -12,7 +12,8 @@ project(variant_lib)
 
 include_directories(./)
 
-add_subdirectory(variant)
-add_subdirectory(static_evaluator)
-add_subdirectory(dynamic_evaluator)
 add_subdirectory(catch)
+add_subdirectory(dynamic_evaluator)
+add_subdirectory(parser)
+add_subdirectory(static_evaluator)
+add_subdirectory(variant)
