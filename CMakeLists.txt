@@ -13,4 +13,5 @@ project(variant_lib)
 include_directories(./)
 
 add_subdirectory(variant)
+add_subdirectory(static_evaluator)
 add_subdirectory(catch)
