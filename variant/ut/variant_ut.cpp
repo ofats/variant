@@ -106,6 +106,12 @@ constexpr bool CheckCallable(F&&) {
 TEST_CASE("SFINAE-friendliness test", "[variant]") {
     using TVar = TVariant<int, double, char, char>;
 
+    SECTION("Check converting constructor") {
+        REQUIRE(WELL_FORMED(int, v, TVar{v}));
+        REQUIRE(ILL_FORMED(char, v, TVar{v}));
+        REQUIRE(ILL_FORMED(std::string, v, TVar{v}));
+    }
+
     SECTION("Check Get and GetIf by index") {
         // Argument to Get and GetIf functions must be less then number of
         // variant alternatives

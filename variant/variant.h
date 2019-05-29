@@ -94,7 +94,8 @@ public:
     }
 
     template <class T, class = std::enable_if_t<
-                           !std::is_same<std::decay_t<T>, TVariant>::value>>
+                           !std::is_same<std::decay_t<T>, TVariant>::value &&
+                           TIndex<std::decay_t<T>>::value != VARIANT_NPOS>>
     TVariant(T&& value) {
         EmplaceImpl<TIndex<T>::value>(std::forward<T>(value));
     }
