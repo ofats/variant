@@ -11,10 +11,12 @@ set(CMAKE_CXX_FLAGS_RELEASE "-O3 -Wall -Wextra -Werror -g")
 project(variant_lib)
 
 include_directories(./)
+include_directories(./benchmark/include)
 
 add_subdirectory(benchmark)
 add_subdirectory(catch)
 add_subdirectory(dynamic_evaluator)
+add_subdirectory(eval_benchmark)
 add_subdirectory(parser)
 add_subdirectory(static_evaluator)
 add_subdirectory(util)

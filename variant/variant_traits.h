@@ -152,7 +152,7 @@ auto Visit(F&& f, base::type_pack<IndexPacks...>, Vs&&... vs)
     using FakeSizes = std::index_sequence<
         1 + base::template_parameters_count_v<std::decay_t<Vs>>...>;
 
-    constexpr LambdaType handlers[] = {
+    static constexpr LambdaType handlers[] = {
         VisitConcrete<ReturnType, IndexPacks,
                       matops::check_boundaries(IndexPacks{}, RealSizes{}), F&&,
                       Vs&&...>...};
