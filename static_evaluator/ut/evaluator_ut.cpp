@@ -7,6 +7,12 @@
 using namespace Catch::literals;
 namespace st_eval = static_evaluator;
 
+namespace {
+
+const auto pi_num = std::cos(-1);
+
+}  // namespace
+
 TEST_CASE("Print test", "[static_evaluator]") {
     st_eval::calc_node node = 5.0;
     auto result = st_eval::print(node);
@@ -46,5 +52,23 @@ TEST_CASE("Simple test", "[static_evaluator]") {
     SECTION("Pow test") {
         const auto node = st_eval::parse("2 ** 3");
         REQUIRE(st_eval::eval(node) == 8_a);
+    }
+    SECTION("Sin test") {
+        auto node = st_eval::parse("sin(0)");
+        REQUIRE(st_eval::eval(node) == 0_a);
+        node = st_eval::parse("sin(3)");
+        REQUIRE(st_eval::eval(node) == Approx(std::sin(3)));
+    }
+    SECTION("Cos test") {
+        auto node = st_eval::parse("cos(0)");
+        REQUIRE(st_eval::eval(node) == 1_a);
+        node = st_eval::parse("cos(3)");
+        REQUIRE(st_eval::eval(node) == Approx(std::cos(3)));
+    }
+    SECTION("Log test") {
+        auto node = st_eval::parse("log(1)");
+        REQUIRE(st_eval::eval(node) == 0_a);
+        node = st_eval::parse("log(3)");
+        REQUIRE(st_eval::eval(node) == Approx(std::log(3)));
     }
 }

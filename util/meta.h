@@ -59,6 +59,25 @@ using invoke_result_t = subtype<invoke_result<F, Args...>>;
 
 namespace detail {
 
+template <bool, class R, class F, class... Args>
+struct is_invocable_r : std::is_same<R, invoke_result_t<F, Args...>> {};
+
+template <class R, class F, class... Args>
+struct is_invocable_r<false, R, F, Args...> : std::false_type {};
+
+}  // namespace detail
+
+// aka std::is_invocable_r
+template <class R, class F, class... Args>
+struct is_invocable_r
+    : detail::is_invocable_r<is_invocable_v<F, Args...>, R, F, Args...> {};
+
+// aka std::is_invocable_r_v
+template <class R, class F, class... Args>
+constexpr bool is_invocable_r_v = is_invocable_r<R, F, Args...>::value;
+
+namespace detail {
+
 template <class... Bs>
 constexpr bool conjunction_impl() {
     bool bs[] = {Bs::value...};

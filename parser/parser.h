@@ -30,12 +30,12 @@ inline input_data next(input_data&& data, const char c) {
 }
 
 template <std::size_t n>
-input_data next(input_data&& data, const char (&s)[n]) {
-    if (!std::count(s, s + n, (*data.input)[data.cursor])) {
-        throw std::runtime_error{make_fancy_error_log(data) +
-                                 "\nExpected one of {" + s + '}'};
+input_data next(input_data&& data, const char* s) {
+    if (!std::equal(s, s + n, data.input->cbegin() + data.cursor)) {
+        throw std::runtime_error{make_fancy_error_log(data) + "\nExpected \"" +
+                                 std::string(s, s + n) + '\"'};
     }
-    ++data.cursor;
+    data.cursor += n;
     return data;
 }
 
@@ -59,6 +59,49 @@ inline input_data skip_spaces(input_data&& data) {
         ++data.cursor;
     }
     return data;
+}
+
+template <class T>
+constexpr bool is_tns_v = base::is_invocable_r_v<input_data, T, input_data&&>;
+
+template <class Tns>
+std::enable_if_t<is_tns_v<Tns>, input_data> operator>>(input_data&& data,
+                                                       Tns t) {
+    return t(std::move(data));
+}
+
+template <class Tns>
+std::enable_if_t<is_tns_v<Tns>> operator>>=(input_data& data, Tns t) {
+    data = std::move(data) >> t;
+}
+
+template <class A, class B,
+          class = std::enable_if_t<is_tns_v<A> && is_tns_v<B>>>
+auto operator>>(A a, B b) {
+    return [a = std::move(a), b = std::move(b)](input_data&& data) {
+        return std::move(data) >> a >> b;
+    };
+}
+
+// -------------------- SKIP SPACES --------------------
+
+inline auto skip_spaces() {
+    return [](input_data&& data) { return skip_spaces(std::move(data)); };
+}
+
+// -------------------- NEXT --------------------
+
+template <char c>
+auto next() {
+    return [](input_data&& data) { return next(std::move(data), c); };
+}
+
+// We're assuming that argument to this call will always be know during compile
+// time, i.e it would be string literal. So there wouldn't be dangling pointer.
+template <std::size_t n>
+auto next(const char (&s)[n]) {
+    // s inside the capture is decayed to `const char*`.
+    return [s = s](input_data&& data) { return next<n - 1>(std::move(data), s); };
 }
 
 }  // namespace prs
