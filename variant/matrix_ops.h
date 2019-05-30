@@ -33,25 +33,46 @@ static_assert(normal_to_flat_index(std::index_sequence<3, 3, 3>{}, 1, 2, 1) ==
                   16,
               "");
 
+namespace detail {
+
+// Constexpr version of std::array (aka std::array from c++17)
+template <class T, std::size_t n>
+struct array {
+    constexpr const T& operator[](std::size_t i) const { return data_[i]; }
+    constexpr T& operator[](std::size_t i) { return data_[i]; }
+    T data_[n];
+};
+
+template <std::size_t index, std::size_t... sizes>
+constexpr auto flat_to_normal_index(std::index_sequence<sizes...>) {
+    const std::size_t dims[] = {sizes...};
+    auto result = array<std::size_t, sizeof...(sizes)>{};
+    auto cur = index;
+    for (std::size_t i = 0; i < sizeof...(sizes); ++i) {
+        result[i] = cur % dims[i];
+        cur /= dims[i];
+    }
+    return result;
+}
+
+template <std::size_t index, class Sizes, std::size_t... ids>
+constexpr auto flat_to_normal_index_helper(Sizes sizes, std::index_sequence<ids...>) {
+    constexpr auto result = flat_to_normal_index<index>(sizes);
+    return std::index_sequence<result[ids]...>{};
+}
+
+}  // namespace detail
+
 // Given matrix dimensions and index in corresponding flattened matrix,
 // computes normal index in that matrix.
 //
 // Example:
 // 0 -> {3, 3, 3} -> flat_to_normal_index -> {0, 0, 0}
 // 26 -> {3, 3, 3} -> flat_to_normal_index -> {2, 2, 2}
-template <std::size_t, std::size_t... acc>
-constexpr auto flat_to_normal_index(std::index_sequence<>,
-                                    std::index_sequence<acc...> result = {}) {
-    return result;
-}
-
-template <std::size_t index, std::size_t size, std::size_t... sizes,
-          std::size_t... acc>
-constexpr auto flat_to_normal_index(std::index_sequence<size, sizes...>,
-                                    std::index_sequence<acc...> = {}) {
-    return flat_to_normal_index<index / size>(
-        std::index_sequence<sizes...>{},
-        std::index_sequence<acc..., index % size>{});
+template <std::size_t index, std::size_t... sizes>
+constexpr auto flat_to_normal_index(std::index_sequence<sizes...> is) {
+    return detail::flat_to_normal_index_helper<index>(
+        is, std::make_index_sequence<sizeof...(sizes)>{});
 }
 
 static_assert(std::is_same<decltype(flat_to_normal_index<0>(
