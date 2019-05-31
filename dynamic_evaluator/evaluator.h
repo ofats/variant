@@ -1,8 +1,8 @@
 #pragma once
 
-#include "util/algo.h"
 #include "variant/variant.h"
 
+#include <cmath>
 #include <memory>
 
 namespace dynamic_evaluator {
@@ -102,14 +102,57 @@ public:
     using binary_node::binary_node;
 
     double eval() override {
-        return base::binpow(
-            this->left_expr_->eval(),
-            static_cast<std::int64_t>(this->right_expr_->eval()));
+        return std::pow(this->left_expr_->eval(),
+                        static_cast<std::int64_t>(this->right_expr_->eval()));
     }
 
     std::string print(const int indent = 0) override {
         return this->left_expr_->print(indent + 1) + std::string(indent, '\t') +
                "**\n" + this->right_expr_->print(indent + 1);
+    }
+};
+
+class unary_node : public calc_node {
+public:
+    unary_node(std::unique_ptr<calc_node> expr) : expr_(std::move(expr)) {}
+
+protected:
+    std::unique_ptr<calc_node> expr_;
+};
+
+class sin_node final : public unary_node {
+public:
+    using unary_node::unary_node;
+
+    double eval() override { return std::sin(this->expr_->eval()); }
+
+    std::string print(const int indent = 0) override {
+        return std::string(indent, '\t') + "sin()" + '\n' +
+               this->expr_->print(indent + 1);
+    }
+};
+
+class cos_node final : public unary_node {
+public:
+    using unary_node::unary_node;
+
+    double eval() override { return std::cos(this->expr_->eval()); }
+
+    std::string print(const int indent = 0) override {
+        return std::string(indent, '\t') + "cos()" + '\n' +
+               this->expr_->print(indent + 1);
+    }
+};
+
+class log_node final : public unary_node {
+public:
+    using unary_node::unary_node;
+
+    double eval() override { return std::log(this->expr_->eval()); }
+
+    std::string print(const int indent = 0) override {
+        return std::string(indent, '\t') + "log()" + '\n' +
+               this->expr_->print(indent + 1);
     }
 };
 
