@@ -2,7 +2,7 @@
 
 #include "parser/parser.h"
 
-namespace static_evaluator {
+namespace evaler {
 
 calc_node e_nonterm(prs::input_data& data);
 calc_node t_nonterm(prs::input_data& data);
@@ -178,4 +178,4 @@ calc_node parse(const std::string& input) {
     return result;
 }
 
-}  // namespace static_evaluator
+}  // namespace evaler

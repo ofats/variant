@@ -5,13 +5,11 @@
 #include <cmath>
 #include <memory>
 
-namespace static_evaluator {
+namespace evaler {
 
-enum class math_func {
-    sin,
-    cos,
-    log
-};
+// -------------------- NODES --------------------
+
+enum class math_func { sin, cos, log };
 
 template <math_func>
 struct single_arg_func_op;
@@ -43,11 +41,15 @@ struct binary_op {
     std::unique_ptr<calc_node> left_expr, right_expr;
 };
 
+// -------------------- PARSING --------------------
+
 // `E` -> `E` + `T` | `E` - `T` | `T`
 // `T` -> `T` * `S` | `T` / `S` | `F`
 // `S` -> `F` ** `S` | `F`
 // `F` -> `P` | - 'N' | sin( `E` ) | cos( `E` ) | log( `E` ) | ( `E` )
 calc_node parse(const std::string& input);
+
+// -------------------- PRINTING --------------------
 
 std::string print(const calc_node& n, const int indent = 0);
 
@@ -91,8 +93,10 @@ inline std::string print(const calc_node& n, const int indent) {
     return Visit(vis, n);
 }
 
+// -------------------- EVALUATION --------------------
+
 inline double eval(const calc_node& n) {
-    struct eval_visitor {
+    struct visitor {
         auto operator()(const double value) { return value; };
         auto operator()(const binary_op<'+'>& value) {
             return eval(*value.left_expr) + eval(*value.right_expr);
@@ -119,7 +123,18 @@ inline double eval(const calc_node& n) {
             return std::log(eval(*value.expr));
         }
     };
-    return Visit(eval_visitor{}, n);
+    return Visit(visitor{}, n);
 }
 
-}  // namespace static_evaluator
+// -------------------- DYNAMIC PART --------------------
+
+class dynamic_calc_node {
+public:
+    virtual ~dynamic_calc_node() = default;
+    virtual double eval() = 0;
+    virtual std::string print(const int indent = 0) = 0;
+};
+
+std::unique_ptr<dynamic_calc_node> convert_to_dynamic(const calc_node& node);
+
+}  // namespace evaler

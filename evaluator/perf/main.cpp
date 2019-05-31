@@ -1,11 +1,10 @@
-#include "benchmark/benchmark.h"
+#include "evaluator/evaluator.h"
 
-#include "dynamic_evaluator/evaluator.h"
-#include "static_evaluator/evaluator.h"
+#include "benchmark/benchmark.h"
 
 namespace {
 
-constexpr char test_data[] = "1 + 2 * (3 - 5) ** 3 / 2 - 6";
+constexpr char test_data[] = "1 + 2 * (3 - 5) ** 3 / 2 - 6 - cos(3) + sin(2)";
 
 std::string create_big_data() {
     auto result = std::string{test_data};
@@ -15,33 +14,34 @@ std::string create_big_data() {
     return result;
 }
 
+const auto small_tree = evaler::parse(test_data);
+const auto small_tree_dyn = evaler::convert_to_dynamic(small_tree);
+const auto large_tree = evaler::parse(create_big_data());
+const auto large_tree_dyn = evaler::convert_to_dynamic(large_tree);
+
 }  // namespace
 
 void BM_static_eval(benchmark::State& state) {
-    auto tree = static_evaluator::parse(test_data);
     for (auto _ : state) {
-        static_evaluator::eval(tree);
+        evaler::eval(small_tree);
     }
 }
 
 void BM_dynamic_eval(benchmark::State& state) {
-    auto tree = dynamic_evaluator::parse(test_data);
     for (auto _ : state) {
-        tree->eval();
+        small_tree_dyn->eval();
     }
 }
 
 void BM_static_eval_big(benchmark::State& state) {
-    auto tree = static_evaluator::parse(create_big_data());
     for (auto _ : state) {
-        static_evaluator::eval(tree);
+        evaler::eval(large_tree);
     }
 }
 
 void BM_dynamic_eval_big(benchmark::State& state) {
-    auto tree = dynamic_evaluator::parse(create_big_data());
     for (auto _ : state) {
-        tree->eval();
+        large_tree_dyn->eval();
     }
 }
 

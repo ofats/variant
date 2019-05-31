@@ -1,16 +1,18 @@
 enable_testing()
 
-project(static_evaluator)
+project(evaluator)
 
 set(HEADER_FILES
     evaluator.h)
 
 set(SOURCE_FILES
-    evaluator.cpp)
+    dynamic.cpp
+    parsing.cpp)
 
 add_library(${PROJECT_NAME} ${SOURCE_FILES} ${HEADER_FILES})
 
 target_link_libraries(${PROJECT_NAME} parser variant util)
 
 add_subdirectory(bin)
+add_subdirectory(perf)
 add_subdirectory(ut)

@@ -1,9 +1,8 @@
-#include "dynamic_evaluator/evaluator.h"
+#include "evaluator/evaluator.h"
 
 #include <iostream>
 
 int main() {
-    namespace evaler = dynamic_evaluator;
     std::string expr;
     std::cout << "> ";
     std::cout.flush();
@@ -12,7 +11,7 @@ int main() {
             break;
         }
         try {
-            std::cout << evaler::parse(expr)->eval() << std::endl;
+            std::cout << evaler::eval(evaler::parse(expr)) << std::endl;
         } catch (std::runtime_error& e) {
 #if defined(__gnu_linux__)
             std::cerr << "\033\[01;31m" << e.what() << "\033\[01;0m"
