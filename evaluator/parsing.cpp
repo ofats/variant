@@ -2,13 +2,14 @@
 
 #include "parser/parser.h"
 
+#include <iostream>
+
 namespace evaler {
 
 calc_node e_nonterm(prs::input_data& data);
 calc_node t_nonterm(prs::input_data& data);
 calc_node s_nonterm(prs::input_data& data);
 calc_node f_nonterm(prs::input_data& data);
-calc_node p_nonterm(prs::input_data& data);
 calc_node n_nonterm(prs::input_data& data);
 
 calc_node e_nonterm(prs::input_data& data) {
@@ -109,63 +110,56 @@ calc_node f_nonterm(prs::input_data& data) {
         return result;
     }
 
-    if ('-' == peek(data)) {
-        data >>= prs::next<'-'>();
-        return n_nonterm(data);
-    }
-    return p_nonterm(data);
-}
-
-calc_node p_nonterm(prs::input_data& data) {
-    const auto is_digit = [](const char c) { return std::isdigit(c); };
-    if (!is_digit(peek(data))) {
-        throw std::runtime_error{prs::make_fancy_error_log(data) +
-                                 "\nDigit expected"};
-    }
-
-    std::int64_t result = 0;
-    while (is_digit(peek(data))) {
-        const std::int64_t digit = peek(data) - '0';
-        constexpr auto max_val = std::numeric_limits<std::int64_t>::max();
-        if (result > max_val / 10) {
-            throw std::runtime_error{prs::make_fancy_error_log(data) +
-                                     "\nSigned integer overflow"};
-        }
-        result *= 10;
-        if (result > max_val - digit) {
-            throw std::runtime_error{prs::make_fancy_error_log(data) +
-                                     "\nSigned integer overflow"};
-        }
-        result += digit;
-        data = prs::next(std::move(data), is_digit);
-    }
-    return calc_node{static_cast<double>(result)};
+    return n_nonterm(data);
 }
 
 calc_node n_nonterm(prs::input_data& data) {
-    const auto is_digit = [](const char c) { return std::isdigit(c); };
-    if (!is_digit(peek(data))) {
+    bool is_negative = false;
+    if ('+' == peek(data)) {
+        data >>= prs::next<'+'>();
+    } else if ('-' == peek(data)) {
+        is_negative = true;
+        data >>= prs::next<'-'>();
+    }
+
+    const auto real_part = [&data] {
+        if (peek(data) != '.') {
+            return 0.0;
+        }
+        data >>= prs::next<'.'>();
+        if (!std::isdigit(peek(data))) {
+            throw std::runtime_error{prs::make_fancy_error_log(data) +
+                                     "\nDigit expected"};
+        }
+        double result = 0.0;
+        double current_pos = 0.1;
+        while (std::isdigit(peek(data))) {
+            const double digit = peek(data) - '0';
+            result += current_pos * digit;
+            current_pos *= 0.1;
+            data >>= prs::next_digit();
+        }
+        return result;
+    };
+
+    double result = 0.0;
+    if ('0' == peek(data)) {
+        data >>= prs::next<'0'>();
+        result = real_part();
+    } else if (std::isdigit(peek(data))) {
+        while (std::isdigit(peek(data))) {
+            const double digit = peek(data) - '0';
+            result *= 10.0;
+            result += digit;
+            data >>= prs::next_digit();
+        }
+        result += real_part();
+    } else {
         throw std::runtime_error{prs::make_fancy_error_log(data) +
                                  "\nDigit expected"};
     }
-
-    std::int64_t result = 0;
-    while (is_digit(peek(data))) {
-        const std::int64_t digit = peek(data) - '0';
-        constexpr auto min_val = std::numeric_limits<std::int64_t>::min();
-        if (result < min_val / 10) {
-            throw std::runtime_error{prs::make_fancy_error_log(data) +
-                                     "\nSigned integer underflow"};
-        }
-        result *= 10;
-        if (result < min_val + digit) {
-            throw std::runtime_error{prs::make_fancy_error_log(data) +
-                                     "\nSigned integer underflow"};
-        }
-        result += digit;
-        data = prs::next(std::move(data), is_digit);
-    }
-    return calc_node{static_cast<double>(result)};
+    data >>= prs::skip_spaces();
+    return (is_negative ? -result : result);
 }
 
 calc_node parse(const std::string& input) {

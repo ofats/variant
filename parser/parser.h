@@ -20,7 +20,8 @@ inline std::string make_fancy_error_log(const input_data& data) {
 
 inline char peek(const input_data& data) { return (*data.input)[data.cursor]; }
 
-inline input_data next(input_data&& data, const char c) {
+template <char c>
+input_data next(input_data&& data) {
     if (c != (*data.input)[data.cursor]) {
         throw std::runtime_error{make_fancy_error_log(data) + "\nExpected '" +
                                  c + '\''};
@@ -40,12 +41,17 @@ input_data next(input_data&& data, const char* s) {
 }
 
 template <class F>
-std::enable_if_t<base::is_invocable_v<F, char>, input_data> next(
-    input_data&& data, F f) {
-    if (!f((*data.input)[data.cursor])) {
+std::enable_if_t<base::is_invocable_r_v<bool, F&&, char>, input_data> next(
+    input_data&& data, F&& f) {
+    if (!std::forward<F>(f)((*data.input)[data.cursor])) {
         throw std::runtime_error{make_fancy_error_log(data)};
     }
     ++data.cursor;
+    return data;
+}
+
+inline input_data advance(input_data&& data, const std::size_t num) {
+    data.cursor += num;
     return data;
 }
 
@@ -64,17 +70,20 @@ inline input_data skip_spaces(input_data&& data) {
 template <class T>
 constexpr bool is_tns_v = base::is_invocable_r_v<input_data, T, input_data&&>;
 
+// Transformation applier.
 template <class Tns>
 std::enable_if_t<is_tns_v<Tns>, input_data> operator>>(input_data&& data,
                                                        Tns t) {
     return t(std::move(data));
 }
 
+// In place transformation applier.
 template <class Tns>
 std::enable_if_t<is_tns_v<Tns>> operator>>=(input_data& data, Tns t) {
     data = std::move(data) >> t;
 }
 
+// Transformations composition.
 template <class A, class B,
           class = std::enable_if_t<is_tns_v<A> && is_tns_v<B>>>
 auto operator>>(A a, B b) {
@@ -93,7 +102,7 @@ inline auto skip_spaces() {
 
 template <char c>
 auto next() {
-    return [](input_data&& data) { return next(std::move(data), c); };
+    return [](input_data&& data) { return next<c>(std::move(data)); };
 }
 
 // We're assuming that argument to this call will always be know during compile
@@ -102,6 +111,18 @@ template <std::size_t n>
 auto next(const char (&s)[n]) {
     // s inside the capture is decayed to `const char*`.
     return [s = s](input_data&& data) { return next<n - 1>(std::move(data), s); };
+}
+
+template <class F,
+          class = std::enable_if_t<base::is_invocable_r_v<bool, F, char>>>
+auto next(F&& f) {
+    return [f = std::move(f)](input_data&& data) {
+        return next(std::move(data), f);
+    };
+}
+
+inline auto next_digit() {
+    return next([](const char c) -> bool { return std::isdigit(c); });
 }
 
 }  // namespace prs

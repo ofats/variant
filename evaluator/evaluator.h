@@ -43,10 +43,13 @@ struct binary_op {
 
 // -------------------- PARSING --------------------
 
+// Symbols '`', '|' are reserved
+//
 // `E` -> `E` + `T` | `E` - `T` | `T`
 // `T` -> `T` * `S` | `T` / `S` | `F`
 // `S` -> `F` ** `S` | `F`
-// `F` -> `P` | - 'N' | sin( `E` ) | cos( `E` ) | log( `E` ) | ( `E` )
+// `F` -> ( `E` ) | sin( `E` ) | cos( `E` ) | log( `E` ) | `N`
+// `N` -> `(0|[+-]?[1-9][0-9]*)(\.[0-9]+)?`
 calc_node parse(const std::string& input);
 
 // -------------------- PRINTING --------------------

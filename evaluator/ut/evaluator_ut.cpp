@@ -36,42 +36,60 @@ TEST_CASE("Parse test", "[evaluator]") {
 }
 
 TEST_CASE("Simple test", "[evaluator]") {
-    SECTION("Sum test") {
+    SECTION("Positive integer") {
+        const auto node = evaler::parse("2");
+        REQUIRE(evaler::eval(node) == 2_a);
+    }
+    SECTION("Negative integer") {
+        const auto node = evaler::parse("-2");
+        REQUIRE(evaler::eval(node) == -2_a);
+    }
+    SECTION("Positive double") {
+        const auto node = evaler::parse("2.5");
+        REQUIRE(evaler::eval(node) == 2.5_a);
+    }
+    SECTION("Negative double") {
+        const auto node = evaler::parse("-2.5");
+        REQUIRE(evaler::eval(node) == -2.5_a);
+    }
+    SECTION("Sum") {
         const auto node = evaler::parse("2 + 3");
         REQUIRE(evaler::eval(node) == 5_a);
     }
-    SECTION("Sub test") {
+    SECTION("Sub") {
         const auto node = evaler::parse("2 - 3");
         REQUIRE(evaler::eval(node) == -1_a);
     }
-    SECTION("Mul test") {
+    SECTION("Mul") {
         const auto node = evaler::parse("2 * 3");
         REQUIRE(evaler::eval(node) == 6_a);
     }
-    SECTION("Div test") {
+    SECTION("Div") {
         const auto node = evaler::parse("3 / 2");
         REQUIRE(evaler::eval(node) == 1.5_a);
     }
-    SECTION("Pow test") {
+    SECTION("Pow") {
         const auto node = evaler::parse("2 ** 3");
         REQUIRE(evaler::eval(node) == 8_a);
     }
-    SECTION("Sin test") {
+    SECTION("Sin") {
         auto node = evaler::parse("sin(0)");
         REQUIRE(evaler::eval(node) == 0_a);
         node = evaler::parse("sin(3)");
         REQUIRE(evaler::eval(node) == Approx(std::sin(3)));
     }
-    SECTION("Cos test") {
+    SECTION("Cos") {
         auto node = evaler::parse("cos(0)");
         REQUIRE(evaler::eval(node) == 1_a);
         node = evaler::parse("cos(3)");
         REQUIRE(evaler::eval(node) == Approx(std::cos(3)));
+        node = evaler::parse("cos(3.1415926)");
+        REQUIRE(evaler::eval(node) == -1_a);
     }
-    SECTION("Log test") {
+    SECTION("Log") {
         auto node = evaler::parse("log(1)");
         REQUIRE(evaler::eval(node) == 0_a);
-        node = evaler::parse("log(3)");
-        REQUIRE(evaler::eval(node) == Approx(std::log(3)));
+        node = evaler::parse("log(2.71828)");
+        REQUIRE(evaler::eval(node) == 1_a);
     }
 }
