@@ -3,8 +3,7 @@ enable_testing()
 project(util)
 
 set(HEADER_FILES
-    meta.h
-    algo.h)
+    meta.h)
 
 set(SOURCE_FILES
     util.cpp)
