@@ -76,6 +76,11 @@ struct is_invocable_r
 template <class R, class F, class... Args>
 constexpr bool is_invocable_r_v = is_invocable_r<R, F, Args...>::value;
 
+template <class F, class... Args>
+auto invoke(F&& f, Args&&... args) -> invoke_result_t<F&&, Args&&...> {
+    return std::forward<F>(f)(std::forward<Args>(args)...);
+}
+
 namespace detail {
 
 template <class... Bs>
