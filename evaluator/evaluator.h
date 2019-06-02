@@ -9,14 +9,17 @@ namespace evaler {
 
 // -------------------- NODES --------------------
 
+// Enumeration describing math functions.
 enum class math_func { sin, cos, log };
 
 template <math_func>
 struct single_arg_func_op;
 
+// Node for representing binary operators, i.e `+`, `-`, etc.
 template <char... signs>
 struct binary_op;
 
+// Base node for calculation tree representation.
 using calc_node = TVariant<
     double, binary_op<'+'>, binary_op<'-'>, binary_op<'*'>, binary_op<'/'>,
     binary_op<'*', '*'>, single_arg_func_op<math_func::sin>,
@@ -54,6 +57,8 @@ calc_node parse(const std::string& input);
 
 // -------------------- PRINTING --------------------
 
+// Prints calculation tree in human readable form.
+// `indent` equals number of tablulations before every line the output.
 std::string print(const calc_node& n, const int indent = 0);
 
 namespace detail {
@@ -98,6 +103,7 @@ inline std::string print(const calc_node& n, const int indent) {
 
 // -------------------- EVALUATION --------------------
 
+// Goes through the calculation tree and returns the result.
 inline double eval(const calc_node& n) {
     struct visitor {
         auto operator()(const double value) { return value; };
@@ -131,6 +137,8 @@ inline double eval(const calc_node& n) {
 
 // -------------------- DYNAMIC PART --------------------
 
+// Abstract class that provides an interface for working with calculation tree.
+// Alternative to `calc_node`.
 class dynamic_calc_node {
 public:
     virtual ~dynamic_calc_node() = default;
@@ -138,6 +146,8 @@ public:
     virtual std::string print(const int indent = 0) = 0;
 };
 
+// Converts `calc_node` to `dynamic_calc_node`, i.e creates dynamic
+// representation of the calculation tree.
 std::unique_ptr<dynamic_calc_node> convert_to_dynamic(const calc_node& node);
 
 }  // namespace evaler
