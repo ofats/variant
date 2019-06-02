@@ -17,9 +17,9 @@ TEST_CASE("Print test", "[evaluator]") {
     auto result = evaler::print(node);
     std::cout << result;
 
-    evaler::calc_node sum_node{IN_PLACE_TYPE<evaler::binary_op<'+'>>,
-                                std::make_unique<evaler::calc_node>(2.0),
-                                std::make_unique<evaler::calc_node>(3.0)};
+    evaler::calc_node sum_node{base::in_place_type<evaler::binary_op<'+'>>,
+                               std::make_unique<evaler::calc_node>(2.0),
+                               std::make_unique<evaler::calc_node>(3.0)};
 
     result = evaler::print(sum_node);
     std::cout << result;

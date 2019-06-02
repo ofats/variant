@@ -2,154 +2,153 @@
 
 #include "variant_traits.h"
 
-template <class T>
-struct TInPlaceType {};  // aka std::in_place_type_t
+namespace base {
 
 template <class T>
-constexpr TInPlaceType<T> IN_PLACE_TYPE;  // aka std::in_place_type
+struct in_place_type_t {};
+
+template <class T>
+constexpr in_place_type_t<T> in_place_type;
 
 template <std::size_t I>
-struct TInPlaceIndex {};  // aka std::in_place_index_t
+struct in_place_index_t {};
 
 template <std::size_t I>
-constexpr TInPlaceIndex<I> IN_PLACE_INDEX;  // aka std::in_place_index
+constexpr in_place_index_t<I> in_place_index;
 
 template <std::size_t I, class V>
-struct TVariantAlternative;  // aka std::variant_alternative
+struct variant_alternative;
 
 template <std::size_t I, class... Ts>
-struct TVariantAlternative<I, TVariant<Ts...>>
+struct variant_alternative<I, variant<Ts...>>
     : base::type_pack_element<I, Ts...> {};
 
 template <std::size_t I, class V>
-using TVariantAlternativeT =
-    typename TVariantAlternative<I, V>::type;  // aka std::variant_alternative_t
+using variant_alternative_t = typename variant_alternative<I, V>::type;
 
 template <class V>
-struct TVariantSize;  // aka std::variant_size
+struct variant_size;
 
 template <class... Ts>
-struct TVariantSize<TVariant<Ts...>>
-    : base::template_parameters_count<TVariant<Ts...>> {};
+struct variant_size<variant<Ts...>>
+    : base::template_parameters_count<variant<Ts...>> {};
 
 template <class V>
-constexpr std::size_t VARIANT_SIZE_V =
-    TVariantSize<V>::value;  // aka std::variant_size_v
+constexpr std::size_t variant_size_v = variant_size<V>::value;
 
-constexpr std::size_t VARIANT_NPOS = NPrivate::T_NPOS;  // aka std::variant_npos
+constexpr std::size_t variant_npos = detail::variant_npos;
 
 template <class F, class... Vs>
-constexpr auto Visit(F&& f, Vs&&... vs)
-    -> NPrivate::TReturnTypeT<F&&, Vs&&...> {
+constexpr auto visit(F&& f, Vs&&... vs)
+    -> detail::visit_result_t<F&&, Vs&&...> {
     constexpr auto matrixDimensionsSizes =
-        std::index_sequence<1 + VARIANT_SIZE_V<std::decay_t<Vs>>...>{};
+        std::index_sequence<1 + variant_size_v<std::decay_t<Vs>>...>{};
 
-    return NPrivate::Visit(
+    return detail::visit(
         std::forward<F>(f),
         matops::build_all_matrix_indexes(matrixDimensionsSizes),
         std::forward<Vs>(vs)...);
 }
 
 template <class T, class... Ts>
-constexpr std::enable_if_t<NPrivate::TIndexOf<T, Ts...>::value != VARIANT_NPOS,
-                           bool>
-HoldsAlternative(const TVariant<Ts...>& v) noexcept {
-    return NPrivate::TIndexOf<T, Ts...>::value == v.index();
+constexpr std::enable_if_t<detail::index_of<T, Ts...> != variant_npos, bool>
+holds_alternative(const variant<Ts...>& v) noexcept {
+    return detail::index_of<T, Ts...> == v.index();
 }
 
 template <class... Ts>
-class TVariant {
-    template <class T>
-    using TIndex = NPrivate::TIndexOf<std::decay_t<T>, Ts...>;
-
-    using T_0 = TVariantAlternativeT<0, TVariant>;
+class variant {
+    using T_0 = variant_alternative_t<0, variant>;
 
     static_assert(base::conjunction_v<base::negation<std::is_reference<Ts>>...>,
-                  "TVariant type arguments cannot be references.");
+                  "variant type arguments cannot be references.");
     static_assert(
         base::conjunction_v<base::negation<std::is_same<Ts, void>>...>,
-        "TVariant type arguments cannot be void.");
+        "variant type arguments cannot be void.");
     static_assert(base::conjunction_v<base::negation<std::is_array<Ts>>...>,
-                  "TVariant type arguments cannot be arrays.");
-    static_assert(sizeof...(Ts) > 0, "TVariant type list cannot be empty.");
+                  "variant type arguments cannot be arrays.");
+    static_assert(sizeof...(Ts) > 0, "variant type list cannot be empty.");
 
 public:
-    TVariant() noexcept(std::is_nothrow_default_constructible<T_0>::value) {
+    variant() noexcept(std::is_nothrow_default_constructible<T_0>::value) {
         static_assert(std::is_default_constructible<T_0>::value,
                       "First alternative must be default constructible");
-        EmplaceImpl<0>();
+        emplace_impl<0>();
     }
 
-    TVariant(const TVariant& rhs) {
+    variant(const variant& rhs) {
         if (!rhs.valueless_by_exception()) {
-            ForwardVariant(rhs);
+            forward_variant(rhs);
         }
     }
 
-    TVariant(TVariant&& rhs) noexcept(
-        base::conjunction<std::is_nothrow_move_constructible<Ts>...>::value) {
+    variant(variant&& rhs) noexcept(
+        base::conjunction_v<std::is_nothrow_move_constructible<Ts>...>) {
         if (!rhs.valueless_by_exception()) {
-            ForwardVariant(std::move(rhs));
+            forward_variant(std::move(rhs));
         }
     }
 
-    template <class T, class = std::enable_if_t<
-                           !std::is_same<std::decay_t<T>, TVariant>::value &&
-                           TIndex<std::decay_t<T>>::value != VARIANT_NPOS>>
-    TVariant(T&& value) {
-        EmplaceImpl<TIndex<T>::value>(std::forward<T>(value));
+    template <class T,
+              class = std::enable_if_t<
+                  !std::is_same<std::decay_t<T>, variant>::value &&
+                  detail::index_of<std::decay_t<T>, Ts...> != variant_npos>>
+    variant(T&& value) {
+        emplace_impl<detail::index_of<std::decay_t<T>, Ts...>>(
+            std::forward<T>(value));
     }
 
-    template <class T, class... TArgs>
-    explicit TVariant(TInPlaceType<T>, TArgs&&... args) {
-        EmplaceImpl<TIndex<T>::value>(std::forward<TArgs>(args)...);
+    template <class T, class... Args>
+    explicit variant(in_place_type_t<T>, Args&&... args) {
+        emplace_impl<detail::index_of<std::decay_t<T>, Ts...>>(
+            std::forward<Args>(args)...);
     }
 
-    template <std::size_t I, class... TArgs>
-    explicit TVariant(TInPlaceIndex<I>, TArgs&&... args) {
-        EmplaceImpl<I>(std::forward<TArgs>(args)...);
+    template <std::size_t I, class... Args>
+    explicit variant(in_place_index_t<I>, Args&&... args) {
+        emplace_impl<I>(std::forward<Args>(args)...);
     }
 
-    ~TVariant() { Destroy(); }
+    ~variant() { destroy(); }
 
-    TVariant& operator=(const TVariant& rhs) {
+    variant& operator=(const variant& rhs) {
         if (rhs.valueless_by_exception()) {
             if (!valueless_by_exception()) {
-                DestroyImpl();
-                Index_ = ::TVariantSize<TVariant>::value;
+                destroy_impl();
+                index_ = variant_size_v<variant>;
             }
         } else if (index() == rhs.index()) {
-            Visit(
+            visit(
                 [](auto& dst, const auto& src) {
-                    NPrivate::CallIfSame<void>(
+                    detail::call_if_same<void>(
                         [](auto& x, const auto& y) { x = y; }, dst, src);
                 },
                 *this, rhs);
         } else {
-            *this = TVariant{rhs};
+            *this = variant{rhs};
         }
         return *this;
     }
 
-    TVariant& operator=(TVariant&& rhs) {
+    variant& operator=(variant&& rhs) {
         if (rhs.valueless_by_exception()) {
             if (!valueless_by_exception()) {
-                DestroyImpl();
-                Index_ = ::TVariantSize<TVariant>::value;
+                destroy_impl();
+                index_ = variant_size_v<variant>;
             }
         } else if (index() == rhs.index()) {
-            Visit(
+            visit(
                 [](auto& dst, auto& src) -> void {
-                    NPrivate::CallIfSame<void>(
+                    detail::call_if_same<void>(
                         [](auto& x, auto& y) { x = std::move(y); }, dst, src);
                 },
                 *this, rhs);
         } else {
-            Destroy();
+            destroy();
             try {
-                ForwardVariant(std::move(rhs));
+                forward_variant(std::move(rhs));
             } catch (...) {
-                Index_ = ::TVariantSize<TVariant>::value;
+                index_ = variant_size_v<variant>;
                 throw;
             }
         }
@@ -157,10 +156,10 @@ public:
     }
 
     template <class T>
-    std::enable_if_t<!std::is_same<std::decay_t<T>, TVariant>::value, TVariant&>
+    std::enable_if_t<!std::is_same<std::decay_t<T>, variant>::value, variant&>
     operator=(T&& value) {
-        if (HoldsAlternative<std::decay_t<T>>(*this)) {
-            *ReinterpretAs<TIndex<std::decay_t<T>>::value>() =
+        if (holds_alternative<std::decay_t<T>>(*this)) {
+            *reinterpret_as<detail::index_of<std::decay_t<T>, Ts...>>() =
                 std::forward<T>(value);
         } else {
             emplace<T>(std::forward<T>(value));
@@ -171,41 +170,41 @@ public:
     // -------------------- OBSERVERS --------------------
 
     constexpr std::size_t index() const noexcept {
-        return valueless_by_exception() ? VARIANT_NPOS : Index_;
+        return valueless_by_exception() ? variant_npos : index_;
     }
 
     constexpr bool valueless_by_exception() const noexcept {
-        return Index_ == ::TVariantSize<TVariant>::value;
+        return index_ == variant_size_v<variant>;
     }
 
     // -------------------- MODIFIERS --------------------
 
     template <std::size_t I, class... Args>
-    std::enable_if_t<std::is_constructible<TVariantAlternativeT<I, TVariant>,
+    std::enable_if_t<std::is_constructible<variant_alternative_t<I, variant>,
                                            Args...>::value,
-                     TVariantAlternativeT<I, TVariant>>&
+                     variant_alternative_t<I, variant>>&
     emplace(Args&&... args) {
-        Destroy();
+        destroy();
         try {
-            return EmplaceImpl<I>(std::forward<Args>(args)...);
+            return emplace_impl<I>(std::forward<Args>(args)...);
         } catch (...) {
-            Index_ = sizeof...(Ts);
+            index_ = sizeof...(Ts);
             throw;
         }
-    };
+    }
 
     template <class T, class... Args>
-    auto emplace(Args&&... args)
-        -> decltype(emplace<TIndex<T>::value>(std::forward<Args>(args)...)) {
-        return emplace<TIndex<T>::value>(std::forward<Args>(args)...);
-    };
+    auto emplace(Args&&... args) -> decltype(
+        emplace<detail::index_of<T, Ts...>>(std::forward<Args>(args)...)) {
+        return emplace<detail::index_of<T, Ts...>>(std::forward<Args>(args)...);
+    }
 
-    void swap(TVariant& rhs) {
+    void swap(variant& rhs) {
         if (!valueless_by_exception() || !rhs.valueless_by_exception()) {
             if (index() == rhs.index()) {
-                Visit(
+                visit(
                     [](auto& a, auto& b) -> void {
-                        NPrivate::CallIfSame<void>(
+                        detail::call_if_same<void>(
                             [](auto& x, auto& y) { std::swap(x, y); }, a, b);
                     },
                     *this, rhs);
@@ -216,14 +215,14 @@ public:
     }
 
 private:
-    void Destroy() noexcept {
+    void destroy() noexcept {
         if (!valueless_by_exception()) {
-            DestroyImpl();
+            destroy_impl();
         }
     }
 
-    void DestroyImpl() noexcept {
-        Visit(
+    void destroy_impl() noexcept {
+        visit(
             [](auto& value) {
                 using T = std::decay_t<decltype(value)>;
                 value.~T();
@@ -232,50 +231,50 @@ private:
     }
 
     template <std::size_t I, class... TArgs>
-    TVariantAlternativeT<I, TVariant>& EmplaceImpl(TArgs&&... args) {
-        new (&Storage_)
-            TVariantAlternativeT<I, TVariant>(std::forward<TArgs>(args)...);
-        Index_ = I;
-        return *ReinterpretAs<I>();
+    variant_alternative_t<I, variant>& emplace_impl(TArgs&&... args) {
+        new (&storage_)
+            variant_alternative_t<I, variant>(std::forward<TArgs>(args)...);
+        index_ = I;
+        return *reinterpret_as<I>();
     }
 
     template <class Variant>
-    void ForwardVariant(Variant&& rhs) {
-        Visit(
+    void forward_variant(Variant&& rhs) {
+        visit(
             [&](auto&& value) {
-                new (this) TVariant(std::forward<decltype(value)>(value));
+                new (this) variant(std::forward<decltype(value)>(value));
             },
             std::forward<Variant>(rhs));
     }
 
 private:
-    friend struct NPrivate::TVariantAccessor;
+    friend struct detail::variant_accessor;
 
     template <std::size_t I>
-    TVariantAlternativeT<I, TVariant>* ReinterpretAs() noexcept {
-        return reinterpret_cast<TVariantAlternativeT<I, TVariant>*>(&Storage_);
+    variant_alternative_t<I, variant>* reinterpret_as() noexcept {
+        return reinterpret_cast<variant_alternative_t<I, variant>*>(&storage_);
     }
 
     template <std::size_t I>
-    const TVariantAlternativeT<I, TVariant>* ReinterpretAs() const noexcept {
-        return reinterpret_cast<const TVariantAlternativeT<I, TVariant>*>(
-            &Storage_);
+    const variant_alternative_t<I, variant>* reinterpret_as() const noexcept {
+        return reinterpret_cast<const variant_alternative_t<I, variant>*>(
+            &storage_);
     }
 
 private:
-    std::size_t Index_ = ::TVariantSize<TVariant>::value;
-    std::aligned_union_t<0, Ts...> Storage_;
+    std::size_t index_ = variant_size_v<variant>;
+    std::aligned_union_t<0, Ts...> storage_;
 };
 
 template <class... Ts>
-bool operator==(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
+bool operator==(const variant<Ts...>& a, const variant<Ts...>& b) {
     if (a.index() != b.index()) {
         return false;
     }
     return a.valueless_by_exception() ||
-           Visit(
+           visit(
                [](const auto& a, const auto& b) {
-                   return NPrivate::CallIfSame<bool>(
+                   return detail::call_if_same<bool>(
                        [](const auto& x, const auto& y) { return x == y; }, a,
                        b);
                },
@@ -283,16 +282,16 @@ bool operator==(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
 }
 
 template <class... Ts>
-bool operator!=(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
+bool operator!=(const variant<Ts...>& a, const variant<Ts...>& b) {
     // The standard forces us to call operator!= for values stored in variants.
     // So we cannot reuse operator==.
     if (a.index() != b.index()) {
         return true;
     }
     return !a.valueless_by_exception() &&
-           Visit(
+           visit(
                [](const auto& a, const auto& b) {
-                   return NPrivate::CallIfSame<bool>(
+                   return detail::call_if_same<bool>(
                        [](const auto& x, const auto& y) { return x != y; }, a,
                        b);
                },
@@ -300,7 +299,7 @@ bool operator!=(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
 }
 
 template <class... Ts>
-bool operator<(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
+bool operator<(const variant<Ts...>& a, const variant<Ts...>& b) {
     if (b.valueless_by_exception()) {
         return false;
     }
@@ -308,9 +307,9 @@ bool operator<(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
         return true;
     }
     if (a.index() == b.index()) {
-        return Visit(
+        return visit(
             [](const auto& a, const auto& b) {
-                return NPrivate::CallIfSame<bool>(
+                return detail::call_if_same<bool>(
                     [](const auto& x, const auto& y) { return x < y; }, a, b);
             },
             a, b);
@@ -319,8 +318,8 @@ bool operator<(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
 }
 
 template <class... Ts>
-bool operator>(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
-    // The standard forces as to call operator> for values stored in variants.
+bool operator>(const variant<Ts...>& a, const variant<Ts...>& b) {
+    // The standard forces us to call operator> for values stored in variants.
     // So we cannot reuse operator< and operator==.
     if (a.valueless_by_exception()) {
         return false;
@@ -329,9 +328,9 @@ bool operator>(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
         return true;
     }
     if (a.index() == b.index()) {
-        return Visit(
+        return visit(
             [](const auto& a, const auto& b) -> bool {
-                return NPrivate::CallIfSame<bool>(
+                return detail::call_if_same<bool>(
                     [](const auto& x, const auto& y) { return x > y; }, a, b);
             },
             a, b);
@@ -340,8 +339,8 @@ bool operator>(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
 }
 
 template <class... Ts>
-bool operator<=(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
-    // The standard forces as to call operator> for values stored in variants.
+bool operator<=(const variant<Ts...>& a, const variant<Ts...>& b) {
+    // The standard forces us to call operator> for values stored in variants.
     // So we cannot reuse operator< and operator==.
     if (a.valueless_by_exception()) {
         return true;
@@ -350,9 +349,9 @@ bool operator<=(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
         return false;
     }
     if (a.index() == b.index()) {
-        return Visit(
+        return visit(
             [](const auto& a, const auto& b) {
-                return NPrivate::CallIfSame<bool>(
+                return detail::call_if_same<bool>(
                     [](const auto& x, const auto& y) { return x <= y; }, a, b);
             },
             a, b);
@@ -361,7 +360,7 @@ bool operator<=(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
 }
 
 template <class... Ts>
-bool operator>=(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
+bool operator>=(const variant<Ts...>& a, const variant<Ts...>& b) {
     // The standard forces as to call operator> for values stored in variants.
     // So we cannot reuse operator< and operator==.
     if (b.valueless_by_exception()) {
@@ -371,9 +370,9 @@ bool operator>=(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
         return false;
     }
     if (a.index() == b.index()) {
-        return Visit(
+        return visit(
             [](const auto& a, const auto& b) {
-                return NPrivate::CallIfSame<bool>(
+                return detail::call_if_same<bool>(
                     [](const auto& x, const auto& y) { return x >= y; }, a, b);
             },
             a, b);
@@ -381,136 +380,137 @@ bool operator>=(const TVariant<Ts...>& a, const TVariant<Ts...>& b) {
     return a.index() > b.index();
 }
 
-namespace NPrivate {
+namespace detail {
 
 template <std::size_t I, class V>
-decltype(auto) GetImpl(V&& v) {
-    if (I != v.index()) {
-        throw TBadVariantAccess{};
+decltype(auto) get_impl(V&& v) {
+    if (I != detail::variant_accessor::index(v)) {
+        throw bad_variant_access{};
     }
-    return NPrivate::TVariantAccessor::Get<I>(std::forward<V>(v));
+    return detail::variant_accessor::get<I>(std::forward<V>(v));
 }
 
-}  // namespace NPrivate
+}  // namespace detail
 
 // -------------------- GET BY INDEX --------------------
 
 template <std::size_t I, class... Ts>
-base::type_pack_element_t<I, Ts...>& Get(TVariant<Ts...>& v) {
-    return NPrivate::GetImpl<I>(v);
+base::type_pack_element_t<I, Ts...>& get(variant<Ts...>& v) {
+    return detail::get_impl<I>(v);
 }
 
 template <std::size_t I, class... Ts>
-const base::type_pack_element_t<I, Ts...>& Get(const TVariant<Ts...>& v) {
-    return NPrivate::GetImpl<I>(v);
+const base::type_pack_element_t<I, Ts...>& get(const variant<Ts...>& v) {
+    return detail::get_impl<I>(v);
 }
 
 template <std::size_t I, class... Ts>
-base::type_pack_element_t<I, Ts...>&& Get(TVariant<Ts...>&& v) {
-    return NPrivate::GetImpl<I>(std::move(v));
+base::type_pack_element_t<I, Ts...>&& get(variant<Ts...>&& v) {
+    return detail::get_impl<I>(std::move(v));
 }
 
 template <std::size_t I, class... Ts>
-const base::type_pack_element_t<I, Ts...>&& Get(const TVariant<Ts...>&& v) {
-    return NPrivate::GetImpl<I>(std::move(v));
+const base::type_pack_element_t<I, Ts...>&& get(const variant<Ts...>&& v) {
+    return detail::get_impl<I>(std::move(v));
 }
 
 // -------------------- GET BY TYPE --------------------
 
 template <class T, class... Ts>
-auto Get(TVariant<Ts...>& v)
-    -> decltype(Get<NPrivate::TIndexOf<T, Ts...>::value>(v)) {
-    return Get<NPrivate::TIndexOf<T, Ts...>::value>(v);
+auto get(variant<Ts...>& v) -> decltype(get<detail::index_of<T, Ts...>>(v)) {
+    return get<detail::index_of<T, Ts...>>(v);
 }
 
 template <class T, class... Ts>
-auto Get(const TVariant<Ts...>& v)
-    -> decltype(Get<NPrivate::TIndexOf<T, Ts...>::value>(v)) {
-    return Get<NPrivate::TIndexOf<T, Ts...>::value>(v);
+auto get(const variant<Ts...>& v)
+    -> decltype(get<detail::index_of<T, Ts...>>(v)) {
+    return get<detail::index_of<T, Ts...>>(v);
 }
 
 template <class T, class... Ts>
-auto Get(TVariant<Ts...>&& v)
-    -> decltype(Get<NPrivate::TIndexOf<T, Ts...>::value>(std::move(v))) {
-    return Get<NPrivate::TIndexOf<T, Ts...>::value>(std::move(v));
+auto get(variant<Ts...>&& v)
+    -> decltype(get<detail::index_of<T, Ts...>>(std::move(v))) {
+    return get<detail::index_of<T, Ts...>>(std::move(v));
 }
 
 template <class T, class... Ts>
-auto Get(const TVariant<Ts...>&& v)
-    -> decltype(Get<NPrivate::TIndexOf<T, Ts...>::value>(std::move(v))) {
-    return Get<NPrivate::TIndexOf<T, Ts...>::value>(std::move(v));
+auto get(const variant<Ts...>&& v)
+    -> decltype(get<detail::index_of<T, Ts...>>(std::move(v))) {
+    return get<detail::index_of<T, Ts...>>(std::move(v));
 }
 
 // -------------------- GET IF BY INDEX --------------------
 
 template <std::size_t I, class... Ts>
-std::add_pointer_t<base::type_pack_element_t<I, Ts...>> GetIf(
-    TVariant<Ts...>* v) noexcept {
-    return v != nullptr && I == v->index()
-               ? &NPrivate::TVariantAccessor::Get<I>(*v)
+std::add_pointer_t<base::type_pack_element_t<I, Ts...>> get_if(
+    variant<Ts...>* v) noexcept {
+    return v != nullptr && I == detail::variant_accessor::index(*v)
+               ? &detail::variant_accessor::get<I>(*v)
                : nullptr;
 }
 
 template <std::size_t I, class... Ts>
-std::add_pointer_t<const base::type_pack_element_t<I, Ts...>> GetIf(
-    const TVariant<Ts...>* v) noexcept {
-    return v != nullptr && I == v->index()
-               ? &NPrivate::TVariantAccessor::Get<I>(*v)
+std::add_pointer_t<const base::type_pack_element_t<I, Ts...>> get_if(
+    const variant<Ts...>* v) noexcept {
+    return v != nullptr && I == detail::variant_accessor::index(*v)
+               ? &detail::variant_accessor::get<I>(*v)
                : nullptr;
 }
 
 // -------------------- GET IF BY TYPE --------------------
 
 template <class T, class... Ts>
-auto GetIf(TVariant<Ts...>* v) noexcept
-    -> decltype(GetIf<NPrivate::TIndexOf<T, Ts...>::value>(v)) {
-    return GetIf<NPrivate::TIndexOf<T, Ts...>::value>(v);
+auto get_if(variant<Ts...>* v) noexcept
+    -> decltype(get_if<detail::index_of<T, Ts...>>(v)) {
+    return get_if<detail::index_of<T, Ts...>>(v);
 }
 
 template <class T, class... Ts>
-auto GetIf(const TVariant<Ts...>* v) noexcept
-    -> decltype(GetIf<NPrivate::TIndexOf<T, Ts...>::value>(v)) {
-    return GetIf<NPrivate::TIndexOf<T, Ts...>::value>(v);
+auto get_if(const variant<Ts...>* v) noexcept
+    -> decltype(get_if<detail::index_of<T, Ts...>>(v)) {
+    return get_if<detail::index_of<T, Ts...>>(v);
 }
 
-struct TMonostate {};
+struct monostate {};
 
-constexpr bool operator<(TMonostate, TMonostate) noexcept { return false; }
-constexpr bool operator>(TMonostate, TMonostate) noexcept { return false; }
-constexpr bool operator<=(TMonostate, TMonostate) noexcept { return true; }
-constexpr bool operator>=(TMonostate, TMonostate) noexcept { return true; }
-constexpr bool operator==(TMonostate, TMonostate) noexcept { return true; }
-constexpr bool operator!=(TMonostate, TMonostate) noexcept { return false; }
+constexpr bool operator<(monostate, monostate) noexcept { return false; }
+constexpr bool operator>(monostate, monostate) noexcept { return false; }
+constexpr bool operator<=(monostate, monostate) noexcept { return true; }
+constexpr bool operator>=(monostate, monostate) noexcept { return true; }
+constexpr bool operator==(monostate, monostate) noexcept { return true; }
+constexpr bool operator!=(monostate, monostate) noexcept { return false; }
 
-namespace NPrivate {
-
-template <std::size_t I, class... Ts>
-base::type_pack_element_t<I, Ts...>& TVariantAccessor::Get(TVariant<Ts...>& v) {
-    return *v.template ReinterpretAs<I>();
-}
+namespace detail {
 
 template <std::size_t I, class... Ts>
-const base::type_pack_element_t<I, Ts...>& TVariantAccessor::Get(
-    const TVariant<Ts...>& v) {
-    return *v.template ReinterpretAs<I>();
+base::type_pack_element_t<I, Ts...>& variant_accessor::get(variant<Ts...>& v) {
+    return *v.template reinterpret_as<I>();
 }
 
 template <std::size_t I, class... Ts>
-base::type_pack_element_t<I, Ts...>&& TVariantAccessor::Get(
-    TVariant<Ts...>&& v) {
-    return std::move(*v.template ReinterpretAs<I>());
+const base::type_pack_element_t<I, Ts...>& variant_accessor::get(
+    const variant<Ts...>& v) {
+    return *v.template reinterpret_as<I>();
 }
 
 template <std::size_t I, class... Ts>
-const base::type_pack_element_t<I, Ts...>&& TVariantAccessor::Get(
-    const TVariant<Ts...>&& v) {
-    return std::move(*v.template ReinterpretAs<I>());
+base::type_pack_element_t<I, Ts...>&& variant_accessor::get(
+    variant<Ts...>&& v) {
+    return std::move(*v.template reinterpret_as<I>());
+}
+
+template <std::size_t I, class... Ts>
+const base::type_pack_element_t<I, Ts...>&& variant_accessor::get(
+    const variant<Ts...>&& v) {
+    return std::move(*v.template reinterpret_as<I>());
 }
 
 template <class... Ts>
-constexpr std::size_t TVariantAccessor::Index(
-    const TVariant<Ts...>& v) noexcept {
-    return v.Index_;
+constexpr std::size_t variant_accessor::index(
+    const variant<Ts...>& v) noexcept {
+    return v.index_;
 }
 
-}  // namespace NPrivate
+}  // namespace detail
+
+}  // namespace base

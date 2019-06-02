@@ -20,7 +20,7 @@ template <char... signs>
 struct binary_op;
 
 // Base node for calculation tree representation.
-using calc_node = TVariant<
+using calc_node = base::variant<
     double, binary_op<'+'>, binary_op<'-'>, binary_op<'*'>, binary_op<'/'>,
     binary_op<'*', '*'>, single_arg_func_op<math_func::sin>,
     single_arg_func_op<math_func::cos>, single_arg_func_op<math_func::log>>;
@@ -98,7 +98,7 @@ struct print_visitor {
 
 inline std::string print(const calc_node& n, const int indent) {
     auto vis = detail::print_visitor{indent};
-    return Visit(vis, n);
+    return base::visit(vis, n);
 }
 
 // -------------------- EVALUATION --------------------
@@ -132,7 +132,7 @@ inline double eval(const calc_node& n) {
             return std::log(eval(*value.expr));
         }
     };
-    return Visit(visitor{}, n);
+    return base::visit(visitor{}, n);
 }
 
 // -------------------- DYNAMIC PART --------------------

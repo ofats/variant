@@ -191,7 +191,7 @@ std::unique_ptr<dynamic_calc_node> convert_to_dynamic(const calc_node& node) {
             return std::make_unique<log_node>(convert_to_dynamic(*value.expr));
         }
     };
-    return Visit(visitor{}, node);
+    return base::visit(visitor{}, node);
 }
 
 }  // namespace evaler
