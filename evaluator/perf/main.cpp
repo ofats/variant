@@ -14,22 +14,36 @@ std::string create_big_data() {
     return result;
 }
 
-const auto small_tree = evaler::parse(test_data);
+const auto small_tree = evaler::parse("42");
 const auto small_tree_dyn = evaler::convert_to_dynamic(small_tree);
+const auto tree = evaler::parse(test_data);
+const auto tree_dyn = evaler::convert_to_dynamic(tree);
 const auto large_tree = evaler::parse(create_big_data());
 const auto large_tree_dyn = evaler::convert_to_dynamic(large_tree);
 
 }  // namespace
 
-void BM_static_eval(benchmark::State& state) {
+void BM_static_eval_small(benchmark::State& state) {
     for (auto _ : state) {
         evaler::eval(small_tree);
     }
 }
 
-void BM_dynamic_eval(benchmark::State& state) {
+void BM_dynamic_eval_small(benchmark::State& state) {
     for (auto _ : state) {
         small_tree_dyn->eval();
+    }
+}
+
+void BM_static_eval(benchmark::State& state) {
+    for (auto _ : state) {
+        evaler::eval(tree);
+    }
+}
+
+void BM_dynamic_eval(benchmark::State& state) {
+    for (auto _ : state) {
+        tree_dyn->eval();
     }
 }
 
@@ -45,6 +59,8 @@ void BM_dynamic_eval_big(benchmark::State& state) {
     }
 }
 
+BENCHMARK(BM_static_eval_small);
+BENCHMARK(BM_dynamic_eval_small);
 BENCHMARK(BM_static_eval);
 BENCHMARK(BM_dynamic_eval);
 BENCHMARK(BM_static_eval_big);
