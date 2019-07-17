@@ -100,7 +100,8 @@ public:
 
 class unary_node : public dynamic_calc_node {
 public:
-    unary_node(std::unique_ptr<dynamic_calc_node> expr) : expr_(std::move(expr)) {}
+    unary_node(std::unique_ptr<dynamic_calc_node> expr)
+        : expr_(std::move(expr)) {}
 
 protected:
     std::unique_ptr<dynamic_calc_node> expr_;
@@ -151,42 +152,42 @@ std::unique_ptr<dynamic_calc_node> convert_to_dynamic(const calc_node& node) {
         auto operator()(const binary_op<'+'>& value)
             -> std::unique_ptr<dynamic_calc_node> {
             return std::make_unique<sum_node>(
-                convert_to_dynamic(*value.left_expr),
-                convert_to_dynamic(*value.right_expr));
+                convert_to_dynamic(value.impl->left),
+                convert_to_dynamic(value.impl->right));
         };
         auto operator()(const binary_op<'-'>& value)
             -> std::unique_ptr<dynamic_calc_node> {
             return std::make_unique<sub_node>(
-                convert_to_dynamic(*value.left_expr),
-                convert_to_dynamic(*value.right_expr));
+                convert_to_dynamic(value.impl->left),
+                convert_to_dynamic(value.impl->right));
         };
         auto operator()(const binary_op<'*'>& value)
             -> std::unique_ptr<dynamic_calc_node> {
             return std::make_unique<mul_node>(
-                convert_to_dynamic(*value.left_expr),
-                convert_to_dynamic(*value.right_expr));
+                convert_to_dynamic(value.impl->left),
+                convert_to_dynamic(value.impl->right));
         };
         auto operator()(const binary_op<'/'>& value)
             -> std::unique_ptr<dynamic_calc_node> {
             return std::make_unique<div_node>(
-                convert_to_dynamic(*value.left_expr),
-                convert_to_dynamic(*value.right_expr));
+                convert_to_dynamic(value.impl->left),
+                convert_to_dynamic(value.impl->right));
         };
         auto operator()(const binary_op<'*', '*'>& value)
             -> std::unique_ptr<dynamic_calc_node> {
             return std::make_unique<pow_node>(
-                convert_to_dynamic(*value.left_expr),
-                convert_to_dynamic(*value.right_expr));
+                convert_to_dynamic(value.impl->left),
+                convert_to_dynamic(value.impl->right));
         };
-        auto operator()(const single_arg_func_op<math_func::sin>& value)
+        auto operator()(const unary_op<math_func::sin>& value)
             -> std::unique_ptr<dynamic_calc_node> {
             return std::make_unique<sin_node>(convert_to_dynamic(*value.expr));
         }
-        auto operator()(const single_arg_func_op<math_func::cos>& value)
+        auto operator()(const unary_op<math_func::cos>& value)
             -> std::unique_ptr<dynamic_calc_node> {
             return std::make_unique<cos_node>(convert_to_dynamic(*value.expr));
         }
-        auto operator()(const single_arg_func_op<math_func::log>& value)
+        auto operator()(const unary_op<math_func::log>& value)
             -> std::unique_ptr<dynamic_calc_node> {
             return std::make_unique<log_node>(convert_to_dynamic(*value.expr));
         }

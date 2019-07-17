@@ -121,34 +121,31 @@ struct visit_result
 template <class F, class... Vs>
 using visit_result_t = base::subtype<visit_result<F, Vs...>>;
 
-template <class ReturnType, class FRef, class... VRefs, std::size_t... ids>
-ReturnType unwrap_indexes(FRef f, VRefs... vs, std::index_sequence<ids...>) {
+template <class R, class FRef, class... VRefs, std::size_t... ids>
+R unwrap_indexes(FRef f, VRefs... vs, std::index_sequence<ids...>) {
     return std::forward<FRef>(f)(
         variant_accessor::get<ids>(std::forward<VRefs>(vs))...);
 }
 
 // Normal case (when no one variant is valueless by exception).
-template <class ReturnType, class Indexes, bool in_boundaries, class FRef,
+template <class R, class Indexes, bool in_boundaries, class FRef,
           class... VRefs>
-constexpr std::enable_if_t<in_boundaries, ReturnType> visit_concrete(
-    FRef f, VRefs... vs) {
-    return unwrap_indexes<ReturnType, FRef, VRefs...>(
+constexpr std::enable_if_t<in_boundaries, R> visit_concrete(FRef f,
+                                                            VRefs... vs) {
+    return unwrap_indexes<R, FRef, VRefs...>(
         std::forward<FRef>(f), std::forward<VRefs>(vs)..., Indexes{});
 }
 
 // Boundaries case (when some of variants is valueless by exception).
-template <class ReturnType, class Indexes, bool in_boundaries, class FRef,
+template <class R, class Indexes, bool in_boundaries, class FRef,
           class... VRefs>
-constexpr std::enable_if_t<!in_boundaries, ReturnType> visit_concrete(
-    FRef, VRefs...) {
+constexpr std::enable_if_t<!in_boundaries, R> visit_concrete(FRef, VRefs...) {
     throw bad_variant_access{};
 }
 
-template <class F, class... Vs, class... IndexPacks>
-auto visit(F&& f, base::type_pack<IndexPacks...>, Vs&&... vs)
-    -> visit_result_t<F&&, Vs&&...> {
-    using return_type = visit_result_t<F&&, Vs&&...>;
-    using handler_type = return_type (*)(F&&, Vs && ...);
+template <class R, class F, class... Vs, class... IndexPacks>
+R visit(F&& f, base::type_pack<IndexPacks...>, Vs&&... vs) {
+    using handler_type = R (*)(F&&, Vs && ...);
 
     using RealSizes = std::index_sequence<
         base::template_parameters_count_v<std::decay_t<Vs>>...>;
@@ -156,7 +153,7 @@ auto visit(F&& f, base::type_pack<IndexPacks...>, Vs&&... vs)
         1 + base::template_parameters_count_v<std::decay_t<Vs>>...>;
 
     static constexpr handler_type handlers[] = {
-        visit_concrete<return_type, IndexPacks,
+        visit_concrete<R, IndexPacks,
                        matops::check_boundaries(IndexPacks{}, RealSizes{}), F&&,
                        Vs&&...>...};
 
@@ -166,13 +163,13 @@ auto visit(F&& f, base::type_pack<IndexPacks...>, Vs&&... vs)
     return handlers[idx](std::forward<F>(f), std::forward<Vs>(vs)...);
 }
 
-template <class ReturnType, class F, class T>
-ReturnType call_if_same(F&& f, T&& a, T&& b) {
+template <class R, class F, class T>
+R call_if_same(F&& f, T&& a, T&& b) {
     return std::forward<F>(f)(std::forward<T>(a), std::forward<T>(b));
 }
 
-template <class ReturnType, class F, class T, class U>
-ReturnType call_if_same(F&&, T&&, U&&) {  // Will never be called
+template <class R, class F, class T, class U>
+R call_if_same(F&&, T&&, U&&) {  // Will never be called
     std::terminate();
 }
 

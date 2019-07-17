@@ -13,36 +13,51 @@ namespace evaler {
 enum class math_func { sin, cos, log };
 
 template <math_func>
-struct single_arg_func_op;
+struct unary_op;
 
 // Node for representing binary operators, i.e `+`, `-`, etc.
 template <char... signs>
 struct binary_op;
 
 // Base node for calculation tree representation.
-using calc_node = base::variant<
-    double, binary_op<'+'>, binary_op<'-'>, binary_op<'*'>, binary_op<'/'>,
-    binary_op<'*', '*'>, single_arg_func_op<math_func::sin>,
-    single_arg_func_op<math_func::cos>, single_arg_func_op<math_func::log>>;
+using calc_node =
+    base::variant<double, binary_op<'+'>, binary_op<'-'>, binary_op<'*'>,
+                  binary_op<'/'>, binary_op<'*', '*'>, unary_op<math_func::sin>,
+                  unary_op<math_func::cos>, unary_op<math_func::log>>;
 
 template <math_func>
-struct single_arg_func_op {
-    single_arg_func_op(std::unique_ptr<calc_node> arg) : expr(std::move(arg)) {}
-    single_arg_func_op(single_arg_func_op&&) = default;
-    single_arg_func_op& operator=(single_arg_func_op&&) = default;
+struct unary_op {
+    unary_op(calc_node&& arg)
+        : expr(std::make_unique<calc_node>(std::move(arg))) {}
 
     std::unique_ptr<calc_node> expr;
 };
 
+namespace detail {
+
+struct binary_op_impl;
+
+}  // namespace detail
+
 template <char... signs>
 struct binary_op {
-    binary_op(std::unique_ptr<calc_node> a, std::unique_ptr<calc_node> b)
-        : left_expr(std::move(a)), right_expr(std::move(b)) {}
-    binary_op(binary_op&&) = default;
-    binary_op& operator=(binary_op&&) = default;
+    binary_op(calc_node&& a, calc_node&& b)
+        : impl(std::make_unique<detail::binary_op_impl>(std::move(a),
+                                                        std::move(b))) {}
 
-    std::unique_ptr<calc_node> left_expr, right_expr;
+    std::unique_ptr<detail::binary_op_impl> impl;
 };
+
+namespace detail {
+
+struct binary_op_impl {
+    binary_op_impl(calc_node&& a, calc_node&& b)
+        : left(std::move(a)), right(std::move(b)) {}
+
+    calc_node left, right;
+};
+
+}  // namespace detail
 
 // -------------------- PARSING --------------------
 
@@ -72,23 +87,23 @@ struct print_visitor {
     }
     template <char sign>
     auto operator()(const binary_op<sign>& value) {
-        return print(*value.left_expr, indent + 1) + std::string(indent, '\t') +
+        return print(value.impl->left, indent + 1) + std::string(indent, '\t') +
                std::string(1, sign) + '\n' +
-               print(*value.right_expr, indent + 1);
+               print(value.impl->right, indent + 1);
     }
     auto operator()(const binary_op<'*', '*'>& value) {
-        return print(*value.left_expr, indent + 1) + std::string(indent, '\t') +
-               "**" + '\n' + print(*value.right_expr, indent + 1);
+        return print(value.impl->left, indent + 1) + std::string(indent, '\t') +
+               "**" + '\n' + print(value.impl->right, indent + 1);
     }
-    auto operator()(const single_arg_func_op<math_func::sin>& value) {
+    auto operator()(const unary_op<math_func::sin>& value) {
         return std::string(indent, '\t') + "sin()" + '\n' +
                print(*value.expr, indent + 1);
     }
-    auto operator()(const single_arg_func_op<math_func::cos>& value) {
+    auto operator()(const unary_op<math_func::cos>& value) {
         return std::string(indent, '\t') + "cos()" + '\n' +
                print(*value.expr, indent + 1);
     }
-    auto operator()(const single_arg_func_op<math_func::log>& value) {
+    auto operator()(const unary_op<math_func::log>& value) {
         return std::string(indent, '\t') + "log()" + '\n' +
                print(*value.expr, indent + 1);
     }
@@ -108,27 +123,27 @@ inline double eval(const calc_node& n) {
     struct visitor {
         auto operator()(const double value) { return value; };
         auto operator()(const binary_op<'+'>& value) {
-            return eval(*value.left_expr) + eval(*value.right_expr);
+            return eval(value.impl->left) + eval(value.impl->right);
         };
         auto operator()(const binary_op<'-'>& value) {
-            return eval(*value.left_expr) - eval(*value.right_expr);
+            return eval(value.impl->left) - eval(value.impl->right);
         };
         auto operator()(const binary_op<'*'>& value) {
-            return eval(*value.left_expr) * eval(*value.right_expr);
+            return eval(value.impl->left) * eval(value.impl->right);
         };
         auto operator()(const binary_op<'/'>& value) {
-            return eval(*value.left_expr) / eval(*value.right_expr);
+            return eval(value.impl->left) / eval(value.impl->right);
         };
         auto operator()(const binary_op<'*', '*'>& value) {
-            return std::pow(eval(*value.left_expr), eval(*value.right_expr));
+            return std::pow(eval(value.impl->left), eval(value.impl->right));
         };
-        auto operator()(const single_arg_func_op<math_func::sin>& value) {
+        auto operator()(const unary_op<math_func::sin>& value) {
             return std::sin(eval(*value.expr));
         }
-        auto operator()(const single_arg_func_op<math_func::cos>& value) {
+        auto operator()(const unary_op<math_func::cos>& value) {
             return std::cos(eval(*value.expr));
         }
-        auto operator()(const single_arg_func_op<math_func::log>& value) {
+        auto operator()(const unary_op<math_func::log>& value) {
             return std::log(eval(*value.expr));
         }
     };

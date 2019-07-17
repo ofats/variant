@@ -19,17 +19,12 @@ calc_node e_nonterm(prs::input_data& data) {
         switch (peek(data)) {
             case '+':
                 data >>= prs::advance() >> prs::skip_spaces();
-                result.emplace<binary_op<'+'>>(
-                    std::make_unique<calc_node>(std::move(result)),
-                    std::make_unique<calc_node>(t_nonterm(data)));
+                result = binary_op<'+'>(std::move(result), t_nonterm(data));
                 data >>= prs::skip_spaces();
                 break;
             case '-':
                 data >>= prs::advance() >> prs::skip_spaces();
-
-                result.emplace<binary_op<'-'>>(
-                    std::make_unique<calc_node>(std::move(result)),
-                    std::make_unique<calc_node>(t_nonterm(data)));
+                result = binary_op<'-'>(std::move(result), t_nonterm(data));
                 data >>= prs::skip_spaces();
                 break;
         }
@@ -44,16 +39,12 @@ calc_node t_nonterm(prs::input_data& data) {
         switch (peek(data)) {
             case '*':
                 data >>= prs::advance() >> prs::skip_spaces();
-                result.emplace<binary_op<'*'>>(
-                    std::make_unique<calc_node>(std::move(result)),
-                    std::make_unique<calc_node>(s_nonterm(data)));
+                result = binary_op<'*'>(std::move(result), s_nonterm(data));
                 data >>= prs::skip_spaces();
                 break;
             case '/':
                 data >>= prs::advance() >> prs::skip_spaces();
-                result.emplace<binary_op<'/'>>(
-                    std::make_unique<calc_node>(std::move(result)),
-                    std::make_unique<calc_node>(s_nonterm(data)));
+                result = binary_op<'/'>(std::move(result), s_nonterm(data));
                 data >>= prs::skip_spaces();
                 break;
         }
@@ -71,9 +62,7 @@ calc_node s_nonterm(prs::input_data& data) {
             return result;
         }
         data >>= prs::advance() >> prs::skip_spaces();
-        return binary_op<'*', '*'>{
-            std::make_unique<calc_node>(std::move(result)),
-            std::make_unique<calc_node>(s_nonterm(data))};
+        return binary_op<'*', '*'>{std::move(result), s_nonterm(data)};
     }
     return result;
 }
@@ -88,24 +77,21 @@ calc_node f_nonterm(prs::input_data& data) {
 
     if ('s' == peek(data)) {
         data >>= prs::advance() >> prs::advance_if("in(") >> prs::skip_spaces();
-        auto result = single_arg_func_op<math_func::sin>(
-            std::make_unique<calc_node>(e_nonterm(data)));
+        auto result = unary_op<math_func::sin>(e_nonterm(data));
         data >>= prs::advance_if<')'>() >> prs::skip_spaces();
         return result;
     }
 
     if ('c' == peek(data)) {
         data >>= prs::advance() >> prs::advance_if("os(") >> prs::skip_spaces();
-        auto result = single_arg_func_op<math_func::cos>(
-            std::make_unique<calc_node>(e_nonterm(data)));
+        auto result = unary_op<math_func::cos>(e_nonterm(data));
         data >>= prs::advance_if<')'>() >> prs::skip_spaces();
         return result;
     }
 
     if ('l' == peek(data)) {
         data >>= prs::advance() >> prs::advance_if("og(") >> prs::skip_spaces();
-        auto result = single_arg_func_op<math_func::log>(
-            std::make_unique<calc_node>(e_nonterm(data)));
+        auto result = unary_op<math_func::log>(e_nonterm(data));
         data >>= prs::advance_if<')'>() >> prs::skip_spaces();
         return result;
     }

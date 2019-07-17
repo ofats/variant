@@ -44,7 +44,7 @@ constexpr auto visit(F&& f, Vs&&... vs)
     constexpr auto matrixDimensionsSizes =
         std::index_sequence<1 + variant_size_v<std::decay_t<Vs>>...>{};
 
-    return detail::visit(
+    return detail::visit<detail::visit_result_t<F&&, Vs&&...>>(
         std::forward<F>(f),
         matops::build_all_matrix_indexes(matrixDimensionsSizes),
         std::forward<Vs>(vs)...);
