@@ -27,9 +27,6 @@ struct variant_accessor {
     template <std::size_t I, class... Ts>
     static const base::type_pack_element_t<I, Ts...>&& get(
         const variant<Ts...>&& v);
-
-    template <class... Ts>
-    static constexpr std::size_t index(const variant<Ts...>& v) noexcept;
 };
 
 constexpr std::size_t variant_npos = -1;
@@ -124,41 +121,47 @@ using visit_result_t = base::subtype<visit_result<F, Vs...>>;
 template <class R, class FRef, class... VRefs, std::size_t... ids>
 R unwrap_indexes(FRef f, VRefs... vs, std::index_sequence<ids...>) {
     return std::forward<FRef>(f)(
-        variant_accessor::get<ids>(std::forward<VRefs>(vs))...);
+        variant_accessor::get<ids - 1>(std::forward<VRefs>(vs))...);
 }
 
 // Normal case (when no one variant is valueless by exception).
-template <class R, class Indexes, bool in_boundaries, class FRef,
-          class... VRefs>
-constexpr std::enable_if_t<in_boundaries, R> visit_concrete(FRef f,
-                                                            VRefs... vs) {
+template <class R, class Indexes, bool valueless, class FRef, class... VRefs>
+constexpr std::enable_if_t<!valueless, R> visit_concrete(FRef f, VRefs... vs) {
     return unwrap_indexes<R, FRef, VRefs...>(
         std::forward<FRef>(f), std::forward<VRefs>(vs)..., Indexes{});
 }
 
-// Boundaries case (when some of variants is valueless by exception).
-template <class R, class Indexes, bool in_boundaries, class FRef,
-          class... VRefs>
-constexpr std::enable_if_t<!in_boundaries, R> visit_concrete(FRef, VRefs...) {
+// Valueless case (when some of variants is valueless by exception).
+template <class R, class Indexes, bool valueless, class FRef, class... VRefs>
+constexpr std::enable_if_t<valueless, R> visit_concrete(FRef, VRefs...) {
     throw bad_variant_access{};
+}
+
+// (size_t)(-1) + 1 == 0, so if one of indexes is 0, variant is valueless.
+template <std::size_t... ids>
+constexpr bool check_valueless(std::index_sequence<ids...>) {
+    const bool bs[] = {(ids == 0)...};
+    for (const bool b : bs) {
+        if (b) {
+            return true;
+        }
+    }
+    return false;
 }
 
 template <class R, class F, class... Vs, class... IndexPacks>
 R visit(F&& f, base::type_pack<IndexPacks...>, Vs&&... vs) {
     using handler_type = R (*)(F&&, Vs && ...);
 
-    using RealSizes = std::index_sequence<
-        base::template_parameters_count_v<std::decay_t<Vs>>...>;
     using FakeSizes = std::index_sequence<
         1 + base::template_parameters_count_v<std::decay_t<Vs>>...>;
 
     static constexpr handler_type handlers[] = {
-        visit_concrete<R, IndexPacks,
-                       matops::check_boundaries(IndexPacks{}, RealSizes{}), F&&,
+        visit_concrete<R, IndexPacks, check_valueless(IndexPacks{}), F&&,
                        Vs&&...>...};
 
-    const std::size_t idx = matops::normal_to_flat_index(
-        FakeSizes{}, variant_accessor::index(vs)...);
+    const std::size_t idx =
+        matops::normal_to_flat_index(FakeSizes{}, (vs.index() + 1)...);
 
     return handlers[idx](std::forward<F>(f), std::forward<Vs>(vs)...);
 }

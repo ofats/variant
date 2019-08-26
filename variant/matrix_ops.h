@@ -85,35 +85,6 @@ static_assert(std::is_same<decltype(flat_to_normal_index<26>(
                            std::index_sequence<2, 2, 2>>::value,
               "");
 
-// Given matrix dimensions and index in that matrix,
-// determines whether index is pointing inside that matrix,
-// i.e each index is less than size of corresponding dimension.
-//
-// Example:
-// {1, 1, 1} -> {3, 3, 3} -> check_boundaries -> true
-// {1, 3, 1} -> {3, 3, 3} -> check_boundaries -> false
-// {5, 5, 5} -> {3, 3, 3} -> check_boundaries -> false
-template <std::size_t... ids, std::size_t... szs>
-constexpr bool check_boundaries(std::index_sequence<ids...>,
-                                std::index_sequence<szs...>) {
-    const bool bs[] = {ids < szs...};
-    bool result = true;
-    for (const bool b : bs) {
-        result &= b;
-    }
-    return result;
-}
-
-static_assert(check_boundaries(std::index_sequence<>{},
-                               std::index_sequence<>{}),
-              "");
-static_assert(check_boundaries(std::index_sequence<1, 2, 1>{},
-                               std::index_sequence<3, 3, 3>{}),
-              "");
-static_assert(!check_boundaries(std::index_sequence<1, 2, 3>{},
-                                std::index_sequence<3, 3, 3>{}),
-              "");
-
 // Given matrix dimensions, calculates matrix size,
 // i.e multiplies all the dimensions.
 //

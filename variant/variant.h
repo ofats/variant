@@ -115,7 +115,7 @@ public:
         if (rhs.valueless_by_exception()) {
             if (!valueless_by_exception()) {
                 destroy_impl();
-                index_ = variant_size_v<variant>;
+                index_ = variant_npos;
             }
         } else if (index() == rhs.index()) {
             visit(
@@ -134,7 +134,7 @@ public:
         if (rhs.valueless_by_exception()) {
             if (!valueless_by_exception()) {
                 destroy_impl();
-                index_ = variant_size_v<variant>;
+                index_ = variant_npos;
             }
         } else if (index() == rhs.index()) {
             visit(
@@ -148,7 +148,7 @@ public:
             try {
                 forward_variant(std::move(rhs));
             } catch (...) {
-                index_ = variant_size_v<variant>;
+                index_ = variant_npos;
                 throw;
             }
         }
@@ -169,12 +169,10 @@ public:
 
     // -------------------- OBSERVERS --------------------
 
-    constexpr std::size_t index() const noexcept {
-        return valueless_by_exception() ? variant_npos : index_;
-    }
+    constexpr std::size_t index() const noexcept { return index_; }
 
     constexpr bool valueless_by_exception() const noexcept {
-        return index_ == variant_size_v<variant>;
+        return index_ == variant_npos;
     }
 
     // -------------------- MODIFIERS --------------------
@@ -188,7 +186,7 @@ public:
         try {
             return emplace_impl<I>(std::forward<Args>(args)...);
         } catch (...) {
-            index_ = sizeof...(Ts);
+            index_ = variant_npos;
             throw;
         }
     }
@@ -262,7 +260,7 @@ private:
     }
 
 private:
-    std::size_t index_ = variant_size_v<variant>;
+    std::size_t index_ = variant_npos;
     std::aligned_union_t<0, Ts...> storage_;
 };
 
@@ -384,7 +382,7 @@ namespace detail {
 
 template <std::size_t I, class V>
 decltype(auto) get_impl(V&& v) {
-    if (I != detail::variant_accessor::index(v)) {
+    if (I != v.index()) {
         throw bad_variant_access{};
     }
     return detail::variant_accessor::get<I>(std::forward<V>(v));
@@ -444,7 +442,7 @@ auto get(const variant<Ts...>&& v)
 template <std::size_t I, class... Ts>
 std::add_pointer_t<base::type_pack_element_t<I, Ts...>> get_if(
     variant<Ts...>* v) noexcept {
-    return v != nullptr && I == detail::variant_accessor::index(*v)
+    return v != nullptr && I == v->index()
                ? &detail::variant_accessor::get<I>(*v)
                : nullptr;
 }
@@ -452,7 +450,7 @@ std::add_pointer_t<base::type_pack_element_t<I, Ts...>> get_if(
 template <std::size_t I, class... Ts>
 std::add_pointer_t<const base::type_pack_element_t<I, Ts...>> get_if(
     const variant<Ts...>* v) noexcept {
-    return v != nullptr && I == detail::variant_accessor::index(*v)
+    return v != nullptr && I == v->index()
                ? &detail::variant_accessor::get<I>(*v)
                : nullptr;
 }
@@ -503,12 +501,6 @@ template <std::size_t I, class... Ts>
 const base::type_pack_element_t<I, Ts...>&& variant_accessor::get(
     const variant<Ts...>&& v) {
     return std::move(*v.template reinterpret_as<I>());
-}
-
-template <class... Ts>
-constexpr std::size_t variant_accessor::index(
-    const variant<Ts...>& v) noexcept {
-    return v.index_;
 }
 
 }  // namespace detail
