@@ -1,6 +1,6 @@
 #include "variant/variant.h"
 
-#include "catch/catch.h"
+#include "catch2/catch.hpp"
 
 TEST_CASE("Smoking test", "[variant]") {
     using var_t = base::variant<int, double, std::string>;

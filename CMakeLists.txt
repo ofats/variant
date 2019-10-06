@@ -19,7 +19,6 @@ include_directories(./)
 
 add_subdirectory(deps)
 
-add_subdirectory(catch)
 add_subdirectory(evaluator)
 add_subdirectory(parser)
 add_subdirectory(util)
