@@ -1,9 +1,7 @@
-enable_testing()
-
-project(evaler_benchmark)
+project(evaluator_bench)
 
 set(SOURCE_FILES
-    main.cpp)
+    ../../evaluator/evaluator_bench.cpp)
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 

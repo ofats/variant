@@ -1,4 +1,4 @@
-#include "variant/variant.h"
+#include "variant.h"
 
 #include "catch2/catch.hpp"
 

@@ -1,5 +1,3 @@
-enable_testing()
-
 project(variant)
 
 set(HEADER_FILES
@@ -13,5 +11,3 @@ set(SOURCE_FILES
 add_library(${PROJECT_NAME} ${SOURCE_FILES} ${HEADER_FILES})
 
 target_link_libraries(${PROJECT_NAME} util)
-
-add_subdirectory(ut)

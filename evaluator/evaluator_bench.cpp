@@ -1,4 +1,4 @@
-#include "evaluator/evaluator.h"
+#include "evaluator.h"
 
 #include "benchmark/benchmark.h"
 

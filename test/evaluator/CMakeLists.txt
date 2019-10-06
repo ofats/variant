@@ -3,7 +3,7 @@ enable_testing()
 project(evaulator_ut)
 
 set(SOURCE_FILES
-    evaluator_ut.cpp)
+    ../../evaluator/evaluator_ut.cpp)
 
 add_executable(${PROJECT_NAME} ${SOURCE_FILES})
 
