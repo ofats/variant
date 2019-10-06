@@ -16,7 +16,6 @@ endif()
 project(variant_lib)
 
 include_directories(./)
-# include_directories(./benchmark/include)
 
 add_subdirectory(deps)
 
