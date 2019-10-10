@@ -6,7 +6,7 @@ dist: xenial
 
 matrix:
   include:
-    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CXX_STANDARD=14 BUILD_TYPE=Debug CXX_FLAGS="-g -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror"
+    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CXX_FLAGS="-g -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror" LINK_FLAGS="-lasan -lubsan"
       name: "GCC-9"
       addons:
         apt:
@@ -15,7 +15,7 @@ matrix:
           packages:
             - g++-9
 
-    - env: MATRIX_EVAL="CC=gcc-8 CXX=g++-8" CXX_STANDARD=14 BUILD_TYPE=Debug CXX_FLAGS="-g -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror"
+    - env: MATRIX_EVAL="CC=gcc-8 CXX=g++-8" CXX_FLAGS="-g -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror" LINK_FLAGS="-lasan -lubsan"
       name: "GCC-8"
       addons:
         apt:
@@ -24,7 +24,7 @@ matrix:
           packages:
             - g++-8
 
-    - env: MATRIX_EVAL="CC=clang-8 CXX=clang++-8" CXX_STANDARD=14 BUILD_TYPE=Debug CXX_FLAGS="-g -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror"
+    - env: MATRIX_EVAL="CC=clang-8 CXX=clang++-8" CXX_FLAGS="-g -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror" LINK_FLAGS="-fsanitize=address,leak,undefined"
       name: "Clang-8"
       addons:
         apt:
@@ -33,7 +33,7 @@ matrix:
           packages:
             - clang-8
 
-    - env: MATRIX_EVAL="CC=clang-8 CXX=clang++-8" CXX_STANDARD=14 BUILD_TYPE=Debug CXX_FLAGS="-g -stdlib=libc++ -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror"
+    - env: MATRIX_EVAL="CC=clang-8 CXX=clang++-8" CXX_FLAGS="-g -stdlib=libc++ -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror" LINK_FLAGS="-stdlib=libc++ -fsanitize=address,leak,undefined"
       name: "Clang-8, libc++"
       addons:
         apt:
@@ -50,6 +50,6 @@ before_install:
 script:
   - mkdir build
   - cd build
-  - cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_STANDARD=$CXX_STANDARD -DCMAKE_CXX_FLAGS="${CXX_FLAGS}"
+  - cmake .. -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_STANDARD=14 -DCMAKE_CXX_FLAGS="${CXX_FLAGS}" -DCMAKE_EXE_LINKER_FLAGS="${LINK_FLAGS}"
   - cmake --build .
   - ctest --output-on-failure
