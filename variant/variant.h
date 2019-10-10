@@ -38,22 +38,22 @@ constexpr std::size_t variant_size_v = variant_size<V>::value;
 
 constexpr std::size_t variant_npos = detail::variant_npos;
 
-template <class F, class... Vs>
-constexpr auto visit(F&& f, Vs&&... vs)
-    -> detail::visit_result_t<F&&, Vs&&...> {
+template <class F, class... Vs,
+          class Result = detail::visit_result_t<F&&, Vs&&...>>
+constexpr Result visit(F&& f, Vs&&... vs) {
     constexpr auto matrixDimensionsSizes =
         std::index_sequence<1 + variant_size_v<std::decay_t<Vs>>...>{};
 
-    return detail::visit<detail::visit_result_t<F&&, Vs&&...>>(
+    return detail::visit<Result>(
         std::forward<F>(f),
         matops::build_all_matrix_indexes(matrixDimensionsSizes),
         std::forward<Vs>(vs)...);
 }
 
-template <class T, class... Ts>
-constexpr std::enable_if_t<detail::index_of<T, Ts...> != variant_npos, bool>
-holds_alternative(const variant<Ts...>& v) noexcept {
-    return detail::index_of<T, Ts...> == v.index();
+template <class T, class... Ts, std::size_t index = detail::index_of<T, Ts...>>
+constexpr std::enable_if_t<index != variant_npos, bool> holds_alternative(
+    const variant<Ts...>& v) noexcept {
+    return index == v.index();
 }
 
 template <class... Ts>
@@ -89,13 +89,12 @@ public:
         }
     }
 
-    template <class T,
-              class = std::enable_if_t<
-                  !std::is_same<std::decay_t<T>, variant>::value &&
-                  detail::index_of<std::decay_t<T>, Ts...> != variant_npos>>
+    template <class T, class TDec = std::decay_t<T>,
+              std::size_t index = detail::index_of<TDec, Ts...>,
+              class = std::enable_if_t<!std::is_same<TDec, variant>::value &&
+                                       index != variant_npos>>
     variant(T&& value) {
-        emplace_impl<detail::index_of<std::decay_t<T>, Ts...>>(
-            std::forward<T>(value));
+        emplace_impl<index>(std::forward<T>(value));
     }
 
     template <class T, class... Args>
@@ -155,11 +154,11 @@ public:
         return *this;
     }
 
-    template <class T>
-    std::enable_if_t<!std::is_same<std::decay_t<T>, variant>::value, variant&>
-    operator=(T&& value) {
-        if (holds_alternative<std::decay_t<T>>(*this)) {
-            *reinterpret_as<detail::index_of<std::decay_t<T>, Ts...>>() =
+    template <class T, class TDec = std::decay_t<T>>
+    std::enable_if_t<!std::is_same<TDec, variant>::value, variant&> operator=(
+        T&& value) {
+        if (holds_alternative<TDec>(*this)) {
+            *reinterpret_as<detail::index_of<TDec, Ts...>>() =
                 std::forward<T>(value);
         } else {
             emplace<T>(std::forward<T>(value));
@@ -191,10 +190,11 @@ public:
         }
     }
 
-    template <class T, class... Args>
-    auto emplace(Args&&... args) -> decltype(
-        emplace<detail::index_of<T, Ts...>>(std::forward<Args>(args)...)) {
-        return emplace<detail::index_of<T, Ts...>>(std::forward<Args>(args)...);
+    template <class T, class... Args,
+              std::size_t index = detail::index_of<T, Ts...>>
+    auto emplace(Args&&... args)
+        -> decltype(emplace<index>(std::forward<Args>(args)...)) {
+        return emplace<index>(std::forward<Args>(args)...);
     }
 
     void swap(variant& rhs) {
@@ -228,10 +228,10 @@ private:
             *this);
     }
 
-    template <std::size_t I, class... TArgs>
-    variant_alternative_t<I, variant>& emplace_impl(TArgs&&... args) {
+    template <std::size_t I, class... Args>
+    variant_alternative_t<I, variant>& emplace_impl(Args&&... args) {
         new (&storage_)
-            variant_alternative_t<I, variant>(std::forward<TArgs>(args)...);
+            variant_alternative_t<I, variant>(std::forward<Args>(args)...);
         index_ = I;
         return *reinterpret_as<I>();
     }
@@ -414,27 +414,24 @@ const base::type_pack_element_t<I, Ts...>&& get(const variant<Ts...>&& v) {
 
 // -------------------- GET BY TYPE --------------------
 
-template <class T, class... Ts>
-auto get(variant<Ts...>& v) -> decltype(get<detail::index_of<T, Ts...>>(v)) {
-    return get<detail::index_of<T, Ts...>>(v);
+template <class T, class... Ts, std::size_t index = detail::index_of<T, Ts...>>
+auto get(variant<Ts...>& v) -> decltype(get<index>(v)) {
+    return get<index>(v);
 }
 
-template <class T, class... Ts>
-auto get(const variant<Ts...>& v)
-    -> decltype(get<detail::index_of<T, Ts...>>(v)) {
-    return get<detail::index_of<T, Ts...>>(v);
+template <class T, class... Ts, std::size_t index = detail::index_of<T, Ts...>>
+auto get(const variant<Ts...>& v) -> decltype(get<index>(v)) {
+    return get<index>(v);
 }
 
-template <class T, class... Ts>
-auto get(variant<Ts...>&& v)
-    -> decltype(get<detail::index_of<T, Ts...>>(std::move(v))) {
-    return get<detail::index_of<T, Ts...>>(std::move(v));
+template <class T, class... Ts, std::size_t index = detail::index_of<T, Ts...>>
+auto get(variant<Ts...>&& v) -> decltype(get<index>(std::move(v))) {
+    return get<index>(std::move(v));
 }
 
-template <class T, class... Ts>
-auto get(const variant<Ts...>&& v)
-    -> decltype(get<detail::index_of<T, Ts...>>(std::move(v))) {
-    return get<detail::index_of<T, Ts...>>(std::move(v));
+template <class T, class... Ts, std::size_t index = detail::index_of<T, Ts...>>
+auto get(const variant<Ts...>&& v) -> decltype(get<index>(std::move(v))) {
+    return get<index>(std::move(v));
 }
 
 // -------------------- GET IF BY INDEX --------------------
@@ -457,16 +454,14 @@ std::add_pointer_t<const base::type_pack_element_t<I, Ts...>> get_if(
 
 // -------------------- GET IF BY TYPE --------------------
 
-template <class T, class... Ts>
-auto get_if(variant<Ts...>* v) noexcept
-    -> decltype(get_if<detail::index_of<T, Ts...>>(v)) {
-    return get_if<detail::index_of<T, Ts...>>(v);
+template <class T, class... Ts, std::size_t index = detail::index_of<T, Ts...>>
+auto get_if(variant<Ts...>* v) noexcept -> decltype(get_if<index>(v)) {
+    return get_if<index>(v);
 }
 
-template <class T, class... Ts>
-auto get_if(const variant<Ts...>* v) noexcept
-    -> decltype(get_if<detail::index_of<T, Ts...>>(v)) {
-    return get_if<detail::index_of<T, Ts...>>(v);
+template <class T, class... Ts, std::size_t index = detail::index_of<T, Ts...>>
+auto get_if(const variant<Ts...>* v) noexcept -> decltype(get_if<index>(v)) {
+    return get_if<index>(v);
 }
 
 struct monostate {};
