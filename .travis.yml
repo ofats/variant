@@ -1,22 +1,19 @@
 sudo: required
 language: cpp
 os: linux
-dist: bionic
+dist: xenial
 
 
 matrix:
   include:
     - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CXX_STANDARD=14 BUILD_TYPE=Debug CXX_FLAGS="-g -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror"
       name: "GCC-9, C++14, Debug"
-
-    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CXX_STANDARD=17 BUILD_TYPE=Debug CXX_FLAGS="-g -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror"
-      name: "GCC-9, C++17, Debug"
-
-    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CXX_STANDARD=14 BUILD_TYPE=Release CXX_FLAGS="-O3 -Wall -Wextra -Werror -g"
-      name: "GCC-9, C++14, Release"
-
-    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CXX_STANDARD=17 BUILD_TYPE=Release CXX_FLAGS="-O3 -Wall -Wextra -Werror -g"
-      name: "GCC-9, C++17, Release"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-9
 
     - env: MATRIX_EVAL="CC=gcc-8 CXX=g++-8" CXX_STANDARD=14 BUILD_TYPE=Debug CXX_FLAGS="-g -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror"
       name: "GCC-8, C++14, Debug"
@@ -27,6 +24,15 @@ matrix:
           packages:
             - g++-8
 
+    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CXX_STANDARD=17 BUILD_TYPE=Debug CXX_FLAGS="-g -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror"
+      name: "GCC-9, C++17, Debug"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-9
+
     - env: MATRIX_EVAL="CC=gcc-8 CXX=g++-8" CXX_STANDARD=17 BUILD_TYPE=Debug CXX_FLAGS="-g -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror"
       name: "GCC-8, C++17, Debug"
       addons:
@@ -36,6 +42,15 @@ matrix:
           packages:
             - g++-8
 
+    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CXX_STANDARD=14 BUILD_TYPE=Release CXX_FLAGS="-O3 -Wall -Wextra -Werror -g"
+      name: "GCC-9, C++14, Release"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-9
+
     - env: MATRIX_EVAL="CC=gcc-8 CXX=g++-8" CXX_STANDARD=14 BUILD_TYPE=Release CXX_FLAGS="-O3 -Wall -Wextra -Werror -g"
       name: "GCC-8, C++14, Release"
       addons:
@@ -44,6 +59,15 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - g++-8
+
+    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CXX_STANDARD=17 BUILD_TYPE=Release CXX_FLAGS="-O3 -Wall -Wextra -Werror -g"
+      name: "GCC-9, C++17, Release"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-9
 
     - env: MATRIX_EVAL="CC=gcc-8 CXX=g++-8" CXX_STANDARD=17 BUILD_TYPE=Release CXX_FLAGS="-O3 -Wall -Wextra -Werror -g"
       name: "GCC-8, C++17, Release"
