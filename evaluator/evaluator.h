@@ -27,8 +27,7 @@ using calc_node =
 
 template <math_func>
 struct unary_op {
-    unary_op(calc_node&& arg)
-        : expr(std::make_unique<calc_node>(std::move(arg))) {}
+    unary_op(calc_node&& arg);
 
     std::unique_ptr<calc_node> expr;
 };
@@ -41,9 +40,7 @@ struct binary_op_impl;
 
 template <char... signs>
 struct binary_op {
-    binary_op(calc_node&& a, calc_node&& b)
-        : impl(std::make_unique<detail::binary_op_impl>(std::move(a),
-                                                        std::move(b))) {}
+    binary_op(calc_node&& a, calc_node&& b);
 
     std::unique_ptr<detail::binary_op_impl> impl;
 };
@@ -58,6 +55,15 @@ struct binary_op_impl {
 };
 
 }  // namespace detail
+
+template <math_func func>
+unary_op<func>::unary_op(calc_node&& arg)
+    : expr(std::make_unique<calc_node>(std::move(arg))) {}
+
+template <char... signs>
+binary_op<signs...>::binary_op(calc_node&& a, calc_node&& b)
+    : impl(std::make_unique<detail::binary_op_impl>(std::move(a),
+                                                    std::move(b))) {}
 
 // -------------------- PARSING --------------------
 
