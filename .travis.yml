@@ -12,10 +12,8 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
-            - jonathonf-binutils
           packages:
             - g++-9
-            - binutils
 
     - env: MATRIX_EVAL="CC=gcc-8 CXX=g++-8" CXX_STANDARD=14 BUILD_TYPE=Debug CXX_FLAGS="-g -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror"
       name: "GCC-8, C++14, Debug"
@@ -32,10 +30,8 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
-            - jonathonf-binutils
           packages:
             - g++-9
-            - binutils
 
     - env: MATRIX_EVAL="CC=gcc-8 CXX=g++-8" CXX_STANDARD=17 BUILD_TYPE=Debug CXX_FLAGS="-g -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror"
       name: "GCC-8, C++17, Debug"
@@ -52,10 +48,8 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
-            - jonathonf-binutils
           packages:
             - g++-9
-            - binutils
 
     - env: MATRIX_EVAL="CC=gcc-8 CXX=g++-8" CXX_STANDARD=14 BUILD_TYPE=Release CXX_FLAGS="-O3 -Wall -Wextra -Werror -g"
       name: "GCC-8, C++14, Release"
@@ -72,10 +66,8 @@ matrix:
         apt:
           sources:
             - ubuntu-toolchain-r-test
-            - jonathonf-binutils
           packages:
             - g++-9
-            - binutils
 
     - env: MATRIX_EVAL="CC=gcc-8 CXX=g++-8" CXX_STANDARD=17 BUILD_TYPE=Release CXX_FLAGS="-O3 -Wall -Wextra -Werror -g"
       name: "GCC-8, C++17, Release"
@@ -92,6 +84,6 @@ before_install:
 script:
   - mkdir build
   - cd build
-  - cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_STANDARD=$CXX_STANDARD -DCMAKE_CXX_FLAGS="${CXX_FLAGS}"
+  - cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_STANDARD=$CXX_STANDARD -DCMAKE_CXX_FLAGS="${CXX_FLAGS}" -DCMAKE_EXE_LINKER_FLAGS=-fuse-ld=gold
   - cmake --build .
   - ctest --output-on-failure
