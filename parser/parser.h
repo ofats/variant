@@ -32,8 +32,28 @@ inline input_data unrecv(input_data&& data) {
 
 // -------------------- TRANSFORMATION OPS --------------------
 
+// Lambda wrapper to deal with ADL in operators.
+template <class F>
+struct callable {
+    auto operator()(input_data&& data) const {
+        return base::invoke(f, std::move(data));
+    }
+    F f;
+};
+
 template <class T>
-constexpr bool is_tns_v = base::is_invocable_r_v<input_data, T, input_data&&>;
+struct is_tns : std::false_type {};
+
+template <class F>
+struct is_tns<callable<F>> : std::true_type {};
+
+template <class T>
+constexpr bool is_tns_v = is_tns<T>::value;
+
+template <class F>
+auto make_callable(F&& f) {
+    return callable<std::decay_t<F>>{std::forward<F>(f)};
+}
 
 // Transformation applier.
 template <class Tns>
@@ -54,9 +74,10 @@ template <class A, class B,
           class = std::enable_if_t<is_tns_v<std::decay_t<A>> &&
                                    is_tns_v<std::decay_t<B>>>>
 auto operator>>(A&& a, B&& b) {
-    return [a = std::move(a), b = std::move(b)](input_data&& data) {
-        return std::move(data) >> a >> b;
-    };
+    return make_callable(
+        [a = std::move(a), b = std::move(b)](input_data&& data) {
+            return std::move(data) >> a >> b;
+        });
 }
 
 // -------------------- TRANSFORMATIONS --------------------
@@ -64,48 +85,48 @@ auto operator>>(A&& a, B&& b) {
 // Unconditional cursor advance.
 template <std::size_t num = 1>
 auto advance() {
-    return [](input_data&& data) {
+    return make_callable([](input_data&& data) {
         data.cursor += num;
         return data;
-    };
+    });
 }
 
 // Cursor will be advanced only if symbol under it equals `c`.
 template <char c>
 auto advance_if() {
-    return [](input_data&& data) {
+    return make_callable([](input_data&& data) {
         if (c != (*data.input)[data.cursor]) {
             throw std::runtime_error{make_fancy_error_log(data) +
                                      "\nExpected '" + c + '\''};
         }
         ++data.cursor;
         return data;
-    };
+    });
 }
 
 // Cursor will be repeatedly advanced
 // until symbol under it stops being equal `c`.
 template <char c>
 auto advance_while() {
-    return [](input_data&& data) {
+    return make_callable([](input_data&& data) {
         while (c == (*data.input)[data.cursor]) {
             ++data.cursor;
         }
         return data;
-    };
+    });
 }
 
 // Cursor will be advanced only if symbol under it satisfies the predicate `F`.
 template <class F,
           class = std::enable_if_t<base::is_invocable_r_v<bool, F, char>>>
 auto advance_if(F&& f) {
-    return [f = std::move(f)](input_data&& data) {
+    return make_callable([f = std::move(f)](input_data&& data) {
         if (!base::invoke(f, (*data.input)[data.cursor])) {
             throw std::runtime_error{make_fancy_error_log(data)};
         }
         ++data.cursor;
         return data;
-    };
+    });
 }
 
 // Cursor will be repeatedly advanced
@@ -113,12 +134,12 @@ auto advance_if(F&& f) {
 template <class F,
           class = std::enable_if_t<base::is_invocable_r_v<bool, F, char>>>
 auto advance_while(F&& f) {
-    return [f = std::move(f)](input_data&& data) {
+    return make_callable([f = std::move(f)](input_data&& data) {
         while (base::invoke(f, (*data.input)[data.cursor])) {
             ++data.cursor;
         }
         return data;
-    };
+    });
 }
 
 // Cursor will be advanced only if the string under it equals `s`.
@@ -128,7 +149,7 @@ auto advance_while(F&& f) {
 template <std::size_t n>
 auto advance_if(const char (&s)[n]) {
     // s inside the capture is decayed to `const char*`.
-    return [s = s](input_data&& data) {
+    return make_callable([s = s](input_data&& data) {
         if (!std::equal(s, s + n - 1, data.input->cbegin() + data.cursor)) {
             throw std::runtime_error{make_fancy_error_log(data) +
                                      "\nExpected \"" +
@@ -136,7 +157,7 @@ auto advance_if(const char (&s)[n]) {
         }
         data.cursor += n - 1;
         return data;
-    };
+    });
 }
 
 // -------------------- PREDEFINED TRANSFORMATIONS --------------------
