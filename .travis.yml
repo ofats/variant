@@ -6,7 +6,7 @@ dist: trusty
 
 matrix:
   include:
-    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CXX_STANDARD=14 BUILD_TYPE=Debug CXX_FLAGS="-O0 -fno-omit-frame-pointer -g -fsanitize=address,leak,undefined -Wall -Wextra -Werror"
+    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CXX_STANDARD=14 BUILD_TYPE=Debug CXX_FLAGS="-g -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror"
       name: "GCC-9, C++14, Debug"
       addons:
         apt:
@@ -15,7 +15,7 @@ matrix:
           packages:
             - g++-9
 
-    - env: MATRIX_EVAL="CC=gcc-8 CXX=g++-8" CXX_STANDARD=14 BUILD_TYPE=Debug CXX_FLAGS="-O0 -fno-omit-frame-pointer -g -fsanitize=address,leak,undefined -Wall -Wextra -Werror"
+    - env: MATRIX_EVAL="CC=gcc-8 CXX=g++-8" CXX_STANDARD=14 BUILD_TYPE=Debug CXX_FLAGS="-g -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror"
       name: "GCC-8, C++14, Debug"
       addons:
         apt:
@@ -24,7 +24,7 @@ matrix:
           packages:
             - g++-8
 
-    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CXX_STANDARD=17 BUILD_TYPE=Debug CXX_FLAGS="-O0 -fno-omit-frame-pointer -g -fsanitize=address,leak,undefined -Wall -Wextra -Werror"
+    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CXX_STANDARD=17 BUILD_TYPE=Debug CXX_FLAGS="-g -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror"
       name: "GCC-9, C++17, Debug"
       addons:
         apt:
@@ -33,7 +33,7 @@ matrix:
           packages:
             - g++-9
 
-    - env: MATRIX_EVAL="CC=gcc-8 CXX=g++-8" CXX_STANDARD=17 BUILD_TYPE=Debug CXX_FLAGS="-O0 -fno-omit-frame-pointer -g -fsanitize=address,leak,undefined -Wall -Wextra -Werror"
+    - env: MATRIX_EVAL="CC=gcc-8 CXX=g++-8" CXX_STANDARD=17 BUILD_TYPE=Debug CXX_FLAGS="-g -fsanitize=address,leak,undefined -fno-sanitize-recover=undefined -Wall -Wextra -Werror"
       name: "GCC-9, C++17, Debug"
       addons:
         apt:
