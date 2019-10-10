@@ -6,37 +6,82 @@ dist: trusty
 
 matrix:
   include:
-    - addons:
+    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CXX_STANDARD=14 BUILD_TYPE=Debug CXX_FLAGS="-O0 -fno-omit-frame-pointer -g -fsanitize=address,leak,undefined -Wall -Wextra -Werror"
+      name: "GCC-9, C++14, Debug"
+      addons:
         apt:
           sources:
-          - ubuntu-toolchain-r-test
+            - ubuntu-toolchain-r-test
           packages:
-          - g++-9
-      env:
-        MATRIX_EVAL="CC=gcc-9 CXX=g++-9"
+            - g++-9
 
-    - addons:
+    - env: MATRIX_EVAL="CC=gcc-8 CXX=g++-8" CXX_STANDARD=14 BUILD_TYPE=Debug CXX_FLAGS="-O0 -fno-omit-frame-pointer -g -fsanitize=address,leak,undefined -Wall -Wextra -Werror"
+      name: "GCC-8, C++14, Debug"
+      addons:
         apt:
           sources:
-          - ubuntu-toolchain-r-test
+            - ubuntu-toolchain-r-test
           packages:
-          - g++-8
-      env:
-        MATRIX_EVAL="CC=gcc-8 CXX=g++-8"
+            - g++-8
 
-env:
-  - BUILD_TYPE=Debug CXX_FLAGS="-O0 -fno-omit-frame-pointer -g -fsanitize=address,leak,undefined -Wall -Wextra -Werror"
-  - BUILD_TYPE=Release CXX_FLAGS="-O3 -Wall -Wextra -Werror -g"
+    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CXX_STANDARD=17 BUILD_TYPE=Debug CXX_FLAGS="-O0 -fno-omit-frame-pointer -g -fsanitize=address,leak,undefined -Wall -Wextra -Werror"
+      name: "GCC-9, C++17, Debug"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-9
 
-env:
-  - CXX_STANDARD=14
-  - CXX_STANDARD=17
+    - env: MATRIX_EVAL="CC=gcc-8 CXX=g++-8" CXX_STANDARD=17 BUILD_TYPE=Debug CXX_FLAGS="-O0 -fno-omit-frame-pointer -g -fsanitize=address,leak,undefined -Wall -Wextra -Werror"
+      name: "GCC-9, C++17, Debug"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-8
+
+    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CXX_STANDARD=14 BUILD_TYPE=Release CXX_FLAGS="-O3 -Wall -Wextra -Werror -g"
+      name: "GCC-9, C++14, Release"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-9
+
+    - env: MATRIX_EVAL="CC=gcc-8 CXX=g++-8" CXX_STANDARD=14 BUILD_TYPE=Release CXX_FLAGS="-O3 -Wall -Wextra -Werror -g"
+      name: "GCC-8, C++14, Release"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-8
+
+    - env: MATRIX_EVAL="CC=gcc-9 CXX=g++-9" CXX_STANDARD=17 BUILD_TYPE=Release CXX_FLAGS="-O3 -Wall -Wextra -Werror -g"
+      name: "GCC-9, C++17, Release"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-9
+
+    - env: MATRIX_EVAL="CC=gcc-8 CXX=g++-8" CXX_STANDARD=17 BUILD_TYPE=Release CXX_FLAGS="-O3 -Wall -Wextra -Werror -g"
+      name: "GCC-9, C++17, Release"
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-8
 
 before_install:
   - eval "${MATRIX_EVAL}"
 
 script:
-  - g++ -v
   - mkdir build
   - cd build
   - cmake .. -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DCMAKE_CXX_STANDARD=$CXX_STANDARD -DCMAKE_CXX_FLAGS=$CXX_FLAGS
