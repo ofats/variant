@@ -3,6 +3,9 @@ Analogue of std::variant written in pure C++14.
 
 Interface is 99% similar to std::variant: https://en.cppreference.com/w/cpp/utility/variant
 
+## Current build
+[![Build Status](https://travis-ci.org/ofats/variant.svg?branch=master)](https://travis-ci.org/ofats/variant)
+
 ## How to test it?
 Firstly, you need to build it using one of these:
 ```
