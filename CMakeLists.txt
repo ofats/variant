@@ -9,9 +9,10 @@ include_directories(./)
 # FIXME: CMAKE_BUILD_TYPE=Release must imply -DNDEBUG implicitly
 if (NOT CMAKE_BUILD_TYPE MATCHES Debug)
   add_definitions(-DNDEBUG)
-  # Enabling benchmarks
-  add_subdirectory(bench)
 endif()
+
+# Enabling benchmarks
+add_subdirectory(bench)
 
 # Enabling tests
 enable_testing()
