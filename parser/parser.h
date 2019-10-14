@@ -12,7 +12,7 @@ namespace prs {
 // Field `cursor` point to current position in the string.
 struct input_data {
     const std::string* input;
-    std::size_t cursor;
+    std::size_t cursor = 0;
 };
 
 // Creates nice error message which contains visual information about current
@@ -50,9 +50,11 @@ struct is_tns<callable<F>> : std::true_type {};
 template <class T>
 constexpr bool is_tns_v = is_tns<T>::value;
 
-template <class F>
-auto make_callable(F&& f) {
-    return callable<std::decay_t<F>>{std::forward<F>(f)};
+template <class F, class FDec = std::decay_t<F>>
+auto make_callable(F&& f)
+    -> std::enable_if_t<base::is_invocable_r_v<input_data, F, input_data&&>,
+                        callable<FDec>> {
+    return callable<FDec>{std::forward<F>(f)};
 }
 
 // Transformation applier.
@@ -75,7 +77,7 @@ template <class A, class B,
                                    is_tns_v<std::decay_t<B>>>>
 auto operator>>(A&& a, B&& b) {
     return make_callable(
-        [a = std::move(a), b = std::move(b)](input_data&& data) {
+        [a = std::forward<A>(a), b = std::forward<B>(b)](input_data&& data) {
             return std::move(data) >> a >> b;
         });
 }
@@ -120,7 +122,7 @@ auto advance_while() {
 template <class F,
           class = std::enable_if_t<base::is_invocable_r_v<bool, F, char>>>
 auto advance_if(F&& f) {
-    return make_callable([f = std::move(f)](input_data&& data) {
+    return make_callable([f = std::forward<F>(f)](input_data&& data) {
         if (!base::invoke(f, (*data.input)[data.cursor])) {
             throw std::runtime_error{make_fancy_error_log(data)};
         }
@@ -134,7 +136,7 @@ auto advance_if(F&& f) {
 template <class F,
           class = std::enable_if_t<base::is_invocable_r_v<bool, F, char>>>
 auto advance_while(F&& f) {
-    return make_callable([f = std::move(f)](input_data&& data) {
+    return make_callable([f = std::forward<F>(f)](input_data&& data) {
         while (base::invoke(f, (*data.input)[data.cursor])) {
             ++data.cursor;
         }
