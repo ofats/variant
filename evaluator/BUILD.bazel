@@ -30,9 +30,15 @@ cc_binary(
     name = "evaluator_bench",
     srcs = ["evaluator_bench.cpp"],
     copts = ["-std=c++14"],
-    linkopts = ["-pthread"],
     deps = [
         ":evaluator",
         "@google_benchmark//:benchmark",
     ],
+)
+
+cc_binary(
+    name = "calculator",
+    srcs = ["bin/main.cpp"],
+    copts = ["-std=c++14"],
+    deps = [":evaluator"],
 )
