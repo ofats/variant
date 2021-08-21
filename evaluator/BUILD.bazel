@@ -1,0 +1,38 @@
+package(default_visibility = ["//visibility:private"])
+
+cc_library(
+    name = "evaluator",
+    srcs = [
+        "dynamic.cpp",
+        "parsing.cpp",
+    ],
+    hdrs = ["evaluator.h"],
+    copts = ["-std=c++14"],
+    linkstatic = True,
+    deps = [
+        "//parser",
+        "//util",
+        "//variant",
+    ],
+)
+
+cc_test(
+    name = "evaulator_test",
+    srcs = ["evaluator_ut.cpp"],
+    copts = ["-std=c++14"],
+    deps = [
+        ":evaluator",
+        "@catch2//:catch2_main",
+    ],
+)
+
+cc_binary(
+    name = "evaluator_bench",
+    srcs = ["evaluator_bench.cpp"],
+    copts = ["-std=c++14"],
+    linkopts = ["-pthread"],
+    deps = [
+        ":evaluator",
+        "@google_benchmark//:benchmark",
+    ],
+)

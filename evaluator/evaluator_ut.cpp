@@ -1,6 +1,6 @@
 #include "evaluator.h"
 
-#include "catch2/catch.hpp"
+#include "catch2/catch_all.hpp"
 
 #include <iostream>
 
@@ -75,13 +75,13 @@ TEST_CASE("Simple test", "[evaluator]") {
         auto node = evaler::parse("sin(0)");
         REQUIRE(evaler::eval(node) == 0_a);
         node = evaler::parse("sin(3)");
-        REQUIRE(evaler::eval(node) == Approx(std::sin(3)));
+        REQUIRE(evaler::eval(node) == Catch::Approx(std::sin(3)));
     }
     SECTION("Cos") {
         auto node = evaler::parse("cos(0)");
         REQUIRE(evaler::eval(node) == 1_a);
         node = evaler::parse("cos(3)");
-        REQUIRE(evaler::eval(node) == Approx(std::cos(3)));
+        REQUIRE(evaler::eval(node) == Catch::Approx(std::cos(3)));
         node = evaler::parse("cos(3.1415926)");
         REQUIRE(evaler::eval(node) == -1_a);
     }

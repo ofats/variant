@@ -1,0 +1,9 @@
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "util",
+    hdrs = ["meta.h"],
+    copts = ["-std=c++14"],
+    linkstatic = True,
+    visibility = ["//:__subpackages__"],
+)
