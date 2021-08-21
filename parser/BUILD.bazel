@@ -1,0 +1,19 @@
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "parser",
+    hdrs = ["parser.h"],
+    copts = ["-std=c++14"],
+    linkstatic = True,
+    deps = ["//util"],
+)
+
+cc_test(
+    name = "parser_test",
+    srcs = ["parser_ut.cpp"],
+    copts = ["-std=c++14"],
+    deps = [
+        ":parser",
+        "@catch2//:catch2_main",
+    ],
+)

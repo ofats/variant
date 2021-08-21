@@ -1,0 +1,33 @@
+package(default_visibility = ["//visibility:public"])
+
+cc_library(
+    name = "variant",
+    hdrs = ["variant.h"],
+    copts = ["-std=c++14"],
+    linkstatic = True,
+    deps = [
+        ":variant_internal",
+        "//util",
+    ],
+)
+
+cc_test(
+    name = "variant_test",
+    srcs = ["variant_ut.cpp"],
+    copts = ["-std=c++14"],
+    deps = [
+        ":variant",
+        "@catch2//:catch2_main",
+    ],
+)
+
+cc_library(
+    name = "variant_internal",
+    hdrs = [
+        "matrix_ops.h",
+        "variant_traits.h",
+    ],
+    copts = ["-std=c++14"],
+    linkstatic = True,
+    visibility = ["//visibility:private"],
+)
