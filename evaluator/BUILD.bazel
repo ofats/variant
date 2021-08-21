@@ -28,8 +28,10 @@ cc_test(
 
 cc_binary(
     name = "evaluator_bench",
+    testonly = 1,
     srcs = ["evaluator_bench.cpp"],
     copts = ["-std=c++14"],
+    tags = ["benchmark"],
     deps = [
         ":evaluator",
         "@google_benchmark//:benchmark",
