@@ -1,5 +1,6 @@
-#include "catch2/catch_all.hpp"
 #include "parser.h"
+
+#include "catch2/catch_all.hpp"
 
 using namespace Catch::literals;
 

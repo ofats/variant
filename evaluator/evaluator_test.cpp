@@ -1,7 +1,8 @@
+#include "evaluator.h"
+
 #include <iostream>
 
 #include "catch2/catch_all.hpp"
-#include "evaluator.h"
 
 using namespace Catch::literals;
 
