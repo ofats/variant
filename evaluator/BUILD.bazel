@@ -3,8 +3,8 @@ package(default_visibility = ["//visibility:private"])
 cc_library(
     name = "evaluator",
     srcs = [
-        "dynamic.cpp",
-        "parsing.cpp",
+        "dynamic.cc",
+        "parsing.cc",
     ],
     hdrs = ["evaluator.h"],
     copts = ["-std=c++14"],
@@ -18,7 +18,7 @@ cc_library(
 
 cc_test(
     name = "evaulator_test",
-    srcs = ["evaluator_test.cpp"],
+    srcs = ["evaluator_test.cc"],
     copts = ["-std=c++14"],
     deps = [
         ":evaluator",
@@ -29,7 +29,7 @@ cc_test(
 cc_binary(
     name = "evaluator_benchmark",
     testonly = 1,
-    srcs = ["evaluator_benchmark.cpp"],
+    srcs = ["evaluator_benchmark.cc"],
     copts = ["-std=c++14"],
     tags = ["benchmark"],
     deps = [
@@ -40,7 +40,7 @@ cc_binary(
 
 cc_binary(
     name = "calculator",
-    srcs = ["bin/main.cpp"],
+    srcs = ["bin/main.cc"],
     copts = ["-std=c++14"],
     deps = [":evaluator"],
 )
