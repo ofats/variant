@@ -43,7 +43,7 @@ struct invoke_result {};
 
 template <class F, class... Args>
 struct invoke_result<F, true, Args...> {
-    using type = decltype(std::declval<F>()(std::declval<Args>()...));
+  using type = decltype(std::declval<F>()(std::declval<Args>()...));
 };
 
 }  // namespace detail
@@ -78,20 +78,20 @@ constexpr bool is_invocable_r_v = is_invocable_r<R, F, Args...>::value;
 
 template <class F, class... Args>
 auto invoke(F&& f, Args&&... args) -> invoke_result_t<F&&, Args&&...> {
-    return std::forward<F>(f)(std::forward<Args>(args)...);
+  return std::forward<F>(f)(std::forward<Args>(args)...);
 }
 
 namespace detail {
 
 template <class... Bs>
 constexpr bool conjunction_impl() {
-    bool bs[] = {Bs::value...};
-    for (const bool b : bs) {
-        if (!b) {
-            return false;
-        }
+  bool bs[] = {Bs::value...};
+  for (const bool b : bs) {
+    if (!b) {
+      return false;
     }
-    return true;
+  }
+  return true;
 }
 
 }  // namespace detail
@@ -117,7 +117,7 @@ namespace detail {
 
 template <std::size_t I, class T>
 struct indexed_type {
-    using type = T;
+  using type = T;
 };
 
 template <class, class... Ts>
@@ -125,7 +125,7 @@ struct indexed_types;
 
 template <std::size_t... Is, class... Ts>
 struct indexed_types<std::index_sequence<Is...>, Ts...> {
-    struct type : indexed_type<Is, Ts>... {};
+  struct type : indexed_type<Is, Ts>... {};
 };
 
 template <class... Ts>
@@ -137,8 +137,8 @@ constexpr indexed_type<I, T> get_indexed_type(indexed_type<I, T>);
 
 template <std::size_t I, bool index_in_boundaries, class... Ts>
 struct type_pack_element_impl {
-    using type = subtype<decltype(
-        get_indexed_type<I>(detail::indexed_types_for<Ts...>{}))>;
+  using type = subtype<decltype(
+      get_indexed_type<I>(detail::indexed_types_for<Ts...>{}))>;
 };
 
 template <std::size_t I, class... Ts>

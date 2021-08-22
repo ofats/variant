@@ -1,8 +1,8 @@
 #pragma once
 
-#include "util/meta.h"
-
 #include <utility>
+
+#include "util/meta.h"
 
 namespace matops {
 
@@ -15,15 +15,15 @@ namespace matops {
 template <std::size_t... szs, class... Ids>
 constexpr std::size_t normal_to_flat_index(std::index_sequence<szs...>,
                                            Ids... ids) {
-    constexpr std::size_t n = sizeof...(ids);
-    constexpr std::size_t sizes[] = {szs...};
-    const std::size_t indexes[] = {(std::size_t)ids...};
-    std::size_t result = 0;
-    for (std::size_t i = 0; i < n; ++i) {
-        result *= sizes[n - i - 1];
-        result += indexes[n - i - 1];
-    }
-    return result;
+  constexpr std::size_t n = sizeof...(ids);
+  constexpr std::size_t sizes[] = {szs...};
+  const std::size_t indexes[] = {(std::size_t)ids...};
+  std::size_t result = 0;
+  for (std::size_t i = 0; i < n; ++i) {
+    result *= sizes[n - i - 1];
+    result += indexes[n - i - 1];
+  }
+  return result;
 }
 
 static_assert(normal_to_flat_index(std::index_sequence<3, 3>{}, 0, 0) == 0, "");
@@ -38,27 +38,28 @@ namespace detail {
 // Constexpr version of std::array (aka std::array from c++17)
 template <class T, std::size_t n>
 struct array {
-    constexpr const T& operator[](std::size_t i) const { return data_[i]; }
-    constexpr T& operator[](std::size_t i) { return data_[i]; }
-    T data_[n];
+  constexpr const T& operator[](std::size_t i) const { return data_[i]; }
+  constexpr T& operator[](std::size_t i) { return data_[i]; }
+  T data_[n];
 };
 
 template <std::size_t index, std::size_t... sizes>
 constexpr auto flat_to_normal_index(std::index_sequence<sizes...>) {
-    const std::size_t dims[] = {sizes...};
-    auto result = array<std::size_t, sizeof...(sizes)>{};
-    auto cur = index;
-    for (std::size_t i = 0; i < sizeof...(sizes); ++i) {
-        result[i] = cur % dims[i];
-        cur /= dims[i];
-    }
-    return result;
+  const std::size_t dims[] = {sizes...};
+  auto result = array<std::size_t, sizeof...(sizes)>{};
+  auto cur = index;
+  for (std::size_t i = 0; i < sizeof...(sizes); ++i) {
+    result[i] = cur % dims[i];
+    cur /= dims[i];
+  }
+  return result;
 }
 
 template <std::size_t index, class Sizes, std::size_t... ids>
-constexpr auto flat_to_normal_index_helper(Sizes sizes, std::index_sequence<ids...>) {
-    constexpr auto result = flat_to_normal_index<index>(sizes);
-    return std::index_sequence<result[ids]...>{};
+constexpr auto flat_to_normal_index_helper(Sizes sizes,
+                                           std::index_sequence<ids...>) {
+  constexpr auto result = flat_to_normal_index<index>(sizes);
+  return std::index_sequence<result[ids]...>{};
 }
 
 }  // namespace detail
@@ -71,8 +72,8 @@ constexpr auto flat_to_normal_index_helper(Sizes sizes, std::index_sequence<ids.
 // 26 -> {3, 3, 3} -> flat_to_normal_index -> {2, 2, 2}
 template <std::size_t index, std::size_t... sizes>
 constexpr auto flat_to_normal_index(std::index_sequence<sizes...> is) {
-    return detail::flat_to_normal_index_helper<index>(
-        is, std::make_index_sequence<sizeof...(sizes)>{});
+  return detail::flat_to_normal_index_helper<index>(
+      is, std::make_index_sequence<sizeof...(sizes)>{});
 }
 
 static_assert(std::is_same<decltype(flat_to_normal_index<0>(
@@ -93,12 +94,12 @@ static_assert(std::is_same<decltype(flat_to_normal_index<26>(
 // {3, 3} -> matrix_size -> 9
 template <std::size_t... szs>
 constexpr std::size_t matrix_size(std::index_sequence<szs...>) {
-    const std::size_t sizes[] = {szs...};
-    std::size_t result = 1;
-    for (const std::size_t s : sizes) {
-        result *= s;
-    }
-    return result;
+  const std::size_t sizes[] = {szs...};
+  std::size_t result = 1;
+  for (const std::size_t s : sizes) {
+    result *= s;
+  }
+  return result;
 }
 constexpr std::size_t matrix_size(std::index_sequence<>) { return 0; }
 
@@ -112,8 +113,8 @@ namespace detail {
 template <std::size_t... indexes, class Sizes>
 constexpr auto build_all_matrix_indexes(std::index_sequence<indexes...>,
                                         Sizes sizes) {
-    return base::type_pack<decltype(
-        matops::flat_to_normal_index<indexes>(sizes))...>{};
+  return base::type_pack<decltype(
+      matops::flat_to_normal_index<indexes>(sizes))...>{};
 }
 
 }  // namespace detail
@@ -128,8 +129,8 @@ constexpr auto build_all_matrix_indexes(std::index_sequence<indexes...>,
 //  {0, 2}, {1, 2}, {2, 2}}
 template <class Sizes>
 constexpr auto build_all_matrix_indexes(Sizes sizes) {
-    return detail::build_all_matrix_indexes(
-        std::make_index_sequence<matrix_size(sizes)>{}, sizes);
+  return detail::build_all_matrix_indexes(
+      std::make_index_sequence<matrix_size(sizes)>{}, sizes);
 }
 
 // 3x3 matrix test.

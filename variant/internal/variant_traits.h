@@ -1,8 +1,8 @@
 #pragma once
 
-#include "matrix_ops.h"
-
 #include <exception>
+
+#include "matrix_ops.h"
 
 namespace base {
 
@@ -14,35 +14,35 @@ class bad_variant_access : public std::exception {};
 namespace detail {
 
 struct variant_accessor {
-    template <std::size_t I, class... Ts>
-    static base::type_pack_element_t<I, Ts...>& get(variant<Ts...>& v);
+  template <std::size_t I, class... Ts>
+  static base::type_pack_element_t<I, Ts...>& get(variant<Ts...>& v);
 
-    template <std::size_t I, class... Ts>
-    static const base::type_pack_element_t<I, Ts...>& get(
-        const variant<Ts...>& v);
+  template <std::size_t I, class... Ts>
+  static const base::type_pack_element_t<I, Ts...>& get(
+      const variant<Ts...>& v);
 
-    template <std::size_t I, class... Ts>
-    static base::type_pack_element_t<I, Ts...>&& get(variant<Ts...>&& v);
+  template <std::size_t I, class... Ts>
+  static base::type_pack_element_t<I, Ts...>&& get(variant<Ts...>&& v);
 
-    template <std::size_t I, class... Ts>
-    static const base::type_pack_element_t<I, Ts...>&& get(
-        const variant<Ts...>&& v);
+  template <std::size_t I, class... Ts>
+  static const base::type_pack_element_t<I, Ts...>&& get(
+      const variant<Ts...>&& v);
 };
 
 constexpr std::size_t variant_npos = -1;
 
 template <class T, class... Ts>
 constexpr std::size_t index_of_impl() {
-    bool bs[] = {std::is_same<T, Ts>::value...};
-    std::size_t result = variant_npos;
-    std::size_t count = 0;
-    for (std::size_t i = 0; i < sizeof...(Ts); ++i) {
-        if (bs[i]) {
-            ++count;
-            result = i;
-        }
+  bool bs[] = {std::is_same<T, Ts>::value...};
+  std::size_t result = variant_npos;
+  std::size_t count = 0;
+  for (std::size_t i = 0; i < sizeof...(Ts); ++i) {
+    if (bs[i]) {
+      ++count;
+      result = i;
     }
-    return count == 1 ? result : variant_npos;
+  }
+  return count == 1 ? result : variant_npos;
 }
 
 // Given some time `T` and type pack `Ts`, returns relative position of `T` in
@@ -120,60 +120,60 @@ using visit_result_t = base::subtype<visit_result<F, Vs...>>;
 
 template <class R, class FRef, class... VRefs, std::size_t... ids>
 R unwrap_indexes(FRef f, VRefs... vs, std::index_sequence<ids...>) {
-    return std::forward<FRef>(f)(
-        variant_accessor::get<ids - 1>(std::forward<VRefs>(vs))...);
+  return std::forward<FRef>(f)(
+      variant_accessor::get<ids - 1>(std::forward<VRefs>(vs))...);
 }
 
 // Normal case (when no one variant is valueless by exception).
 template <class R, class Indexes, bool valueless, class FRef, class... VRefs>
 constexpr std::enable_if_t<!valueless, R> visit_concrete(FRef f, VRefs... vs) {
-    return unwrap_indexes<R, FRef, VRefs...>(
-        std::forward<FRef>(f), std::forward<VRefs>(vs)..., Indexes{});
+  return unwrap_indexes<R, FRef, VRefs...>(
+      std::forward<FRef>(f), std::forward<VRefs>(vs)..., Indexes{});
 }
 
 // Valueless case (when some of variants is valueless by exception).
 template <class R, class Indexes, bool valueless, class FRef, class... VRefs>
 constexpr std::enable_if_t<valueless, R> visit_concrete(FRef, VRefs...) {
-    throw bad_variant_access{};
+  throw bad_variant_access{};
 }
 
 // (size_t)(-1) + 1 == 0, so if one of indexes is 0, variant is valueless.
 template <std::size_t... ids>
 constexpr bool check_valueless(std::index_sequence<ids...>) {
-    const bool bs[] = {(ids == 0)...};
-    for (const bool b : bs) {
-        if (b) {
-            return true;
-        }
+  const bool bs[] = {(ids == 0)...};
+  for (const bool b : bs) {
+    if (b) {
+      return true;
     }
-    return false;
+  }
+  return false;
 }
 
 template <class R, class F, class... Vs, class... IndexPacks>
 R visit(F&& f, base::type_pack<IndexPacks...>, Vs&&... vs) {
-    using handler_type = R (*)(F&&, Vs && ...);
+  using handler_type = R (*)(F&&, Vs && ...);
 
-    using FakeSizes = std::index_sequence<
-        1 + base::template_parameters_count_v<std::decay_t<Vs>>...>;
+  using FakeSizes = std::index_sequence<
+      1 + base::template_parameters_count_v<std::decay_t<Vs>>...>;
 
-    static constexpr handler_type handlers[] = {
-        visit_concrete<R, IndexPacks, check_valueless(IndexPacks{}), F&&,
-                       Vs&&...>...};
+  static constexpr handler_type handlers[] = {
+      visit_concrete<R, IndexPacks, check_valueless(IndexPacks{}), F&&,
+                     Vs&&...>...};
 
-    const std::size_t idx =
-        matops::normal_to_flat_index(FakeSizes{}, (vs.index() + 1)...);
+  const std::size_t idx =
+      matops::normal_to_flat_index(FakeSizes{}, (vs.index() + 1)...);
 
-    return handlers[idx](std::forward<F>(f), std::forward<Vs>(vs)...);
+  return handlers[idx](std::forward<F>(f), std::forward<Vs>(vs)...);
 }
 
 template <class R, class F, class T>
 R call_if_same(F&& f, T&& a, T&& b) {
-    return std::forward<F>(f)(std::forward<T>(a), std::forward<T>(b));
+  return std::forward<F>(f)(std::forward<T>(a), std::forward<T>(b));
 }
 
 template <class R, class F, class T, class U>
 R call_if_same(F&&, T&&, U&&) {  // Will never be called
-    std::terminate();
+  std::terminate();
 }
 
 }  // namespace detail
