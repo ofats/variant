@@ -24,8 +24,8 @@ cc_test(
 cc_library(
     name = "variant_internal",
     hdrs = [
-        "matrix_ops.h",
-        "variant_traits.h",
+        "internal/matrix_ops.h",
+        "internal/variant_traits.h",
     ],
     copts = ["-std=c++14"],
     linkstatic = True,

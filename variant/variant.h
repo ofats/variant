@@ -1,6 +1,6 @@
 #pragma once
 
-#include "variant_traits.h"
+#include "internal/variant_traits.h"
 
 namespace base {
 
