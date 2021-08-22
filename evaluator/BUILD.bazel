@@ -40,7 +40,7 @@ cc_binary(
 
 cc_binary(
     name = "calculator",
-    srcs = ["bin/main.cc"],
+    srcs = ["calculator_main.cc"],
     copts = ["-std=c++14"],
     deps = [":evaluator"],
 )

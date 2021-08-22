@@ -1,6 +1,6 @@
 #include <iostream>
 
-#include "evaluator/evaluator.h"
+#include "evaluator.h"
 
 int main() {
   std::string expr;
