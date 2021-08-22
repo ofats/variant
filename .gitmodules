@@ -1,6 +1,0 @@
-[submodule "deps/benchmark"]
-	path = deps/benchmark
-	url = https://github.com/google/benchmark
-[submodule "deps/catch/Catch2"]
-	path = deps/catch2/Catch2
-	url = https://github.com/catchorg/Catch2
